@@ -25,7 +25,7 @@ const employee = (app: Express) => {
 
   // CREATE Employee
   app.route("/employees").post(
-    checkPermission("create_employee"), 
+    // checkPermission("create_employee"), 
     async (req, res, next) => {
       try {
         await addEmployeeController(req, res);

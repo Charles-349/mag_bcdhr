@@ -1,4 +1,4 @@
-CREATE TYPE "public"."employee_role" AS ENUM('admin', 'hr', 'manager', 'employee');--> statement-breakpoint
+CREATE TYPE "public"."contract_type" AS ENUM('full_time', 'part_time', 'intern', 'contract', 'casual');--> statement-breakpoint
 CREATE TYPE "public"."employee_status" AS ENUM('active', 'suspended', 'terminated');--> statement-breakpoint
 CREATE TYPE "public"."gender" AS ENUM('male', 'female');--> statement-breakpoint
 CREATE TYPE "public"."leave_status" AS ENUM('pending', 'approved', 'rejected', 'cancelled');--> statement-breakpoint
@@ -21,13 +21,13 @@ CREATE TABLE "employees" (
 	"email" varchar(255) NOT NULL,
 	"phone" varchar(50),
 	"gender" "gender" NOT NULL,
-	"employee_role" "employee_role" DEFAULT 'employee',
 	"employee_status" "employee_status" DEFAULT 'active',
+	"contract_type" "contract_type" DEFAULT 'full_time' NOT NULL,
+	"role_id" integer NOT NULL,
 	"job_title" varchar(255),
 	"date_hired" date,
 	"password" varchar(255),
 	"image_url" varchar(255) DEFAULT 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y',
-	"is_deleted" boolean DEFAULT false,
 	"created_at" timestamp DEFAULT now(),
 	"updated_at" timestamp DEFAULT now(),
 	CONSTRAINT "employees_email_unique" UNIQUE("email")
@@ -99,6 +99,21 @@ CREATE TABLE "leave_types" (
 	CONSTRAINT "leave_types_name_unique" UNIQUE("name")
 );
 --> statement-breakpoint
+CREATE TABLE "password_resets" (
+	"id" serial PRIMARY KEY NOT NULL,
+	"email" varchar NOT NULL,
+	"token" varchar NOT NULL,
+	"expires_at" timestamp NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE "permissions" (
+	"id" serial PRIMARY KEY NOT NULL,
+	"name" varchar(150) NOT NULL,
+	"description" text,
+	"created_at" timestamp DEFAULT now(),
+	CONSTRAINT "permissions_name_unique" UNIQUE("name")
+);
+--> statement-breakpoint
 CREATE TABLE "public_holidays" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"name" varchar(255) NOT NULL,
@@ -106,8 +121,24 @@ CREATE TABLE "public_holidays" (
 	"created_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
+CREATE TABLE "role_permissions" (
+	"id" serial PRIMARY KEY NOT NULL,
+	"role_id" integer NOT NULL,
+	"permission_id" integer NOT NULL,
+	"created_at" timestamp DEFAULT now()
+);
+--> statement-breakpoint
+CREATE TABLE "roles" (
+	"id" serial PRIMARY KEY NOT NULL,
+	"name" varchar(100) NOT NULL,
+	"description" text,
+	"created_at" timestamp DEFAULT now(),
+	CONSTRAINT "roles_name_unique" UNIQUE("name")
+);
+--> statement-breakpoint
 ALTER TABLE "employees" ADD CONSTRAINT "employees_department_id_departments_id_fk" FOREIGN KEY ("department_id") REFERENCES "public"."departments"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "employees" ADD CONSTRAINT "employees_reports_to_employees_id_fk" FOREIGN KEY ("reports_to") REFERENCES "public"."employees"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "employees" ADD CONSTRAINT "employees_role_id_roles_id_fk" FOREIGN KEY ("role_id") REFERENCES "public"."roles"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "hr_audit_logs" ADD CONSTRAINT "hr_audit_logs_employee_id_employees_id_fk" FOREIGN KEY ("employee_id") REFERENCES "public"."employees"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "hr_notifications" ADD CONSTRAINT "hr_notifications_employee_id_employees_id_fk" FOREIGN KEY ("employee_id") REFERENCES "public"."employees"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "leave_approvals" ADD CONSTRAINT "leave_approvals_leave_request_id_leave_requests_id_fk" FOREIGN KEY ("leave_request_id") REFERENCES "public"."leave_requests"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
@@ -115,4 +146,6 @@ ALTER TABLE "leave_approvals" ADD CONSTRAINT "leave_approvals_approver_id_employ
 ALTER TABLE "leave_balances" ADD CONSTRAINT "leave_balances_employee_id_employees_id_fk" FOREIGN KEY ("employee_id") REFERENCES "public"."employees"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "leave_balances" ADD CONSTRAINT "leave_balances_leave_type_id_leave_types_id_fk" FOREIGN KEY ("leave_type_id") REFERENCES "public"."leave_types"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "leave_requests" ADD CONSTRAINT "leave_requests_employee_id_employees_id_fk" FOREIGN KEY ("employee_id") REFERENCES "public"."employees"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "leave_requests" ADD CONSTRAINT "leave_requests_leave_type_id_leave_types_id_fk" FOREIGN KEY ("leave_type_id") REFERENCES "public"."leave_types"("id") ON DELETE no action ON UPDATE no action;
+ALTER TABLE "leave_requests" ADD CONSTRAINT "leave_requests_leave_type_id_leave_types_id_fk" FOREIGN KEY ("leave_type_id") REFERENCES "public"."leave_types"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "role_permissions" ADD CONSTRAINT "role_permissions_role_id_roles_id_fk" FOREIGN KEY ("role_id") REFERENCES "public"."roles"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "role_permissions" ADD CONSTRAINT "role_permissions_permission_id_permissions_id_fk" FOREIGN KEY ("permission_id") REFERENCES "public"."permissions"("id") ON DELETE no action ON UPDATE no action;

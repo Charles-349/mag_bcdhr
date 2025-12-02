@@ -5,15 +5,8 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1764316265007,
-      "tag": "0000_magical_stark_industries",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1764658564350,
-      "tag": "0001_powerful_zuras",
+      "when": 1764673498599,
+      "tag": "0000_lucky_mandroid",
       "breakpoints": true
     }
   ]
