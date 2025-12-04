@@ -6,19 +6,20 @@
   "scripts": {
     "dev": "tsx watch src/server.ts",
     "build": "tsc",
-    "start": "npm run build && node dist/index.js",
+    "start": "node dist/server.js",
     "generate": "drizzle-kit generate",
-    "migrate": "tsx src/Drizzle/migrate.ts"
+    "migrate": "tsx src/Drizzle/migrate.ts",
+    "push": "drizzle-kit push",
+    "studio": "drizzle-kit studio"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "packageManager": "pnpm@10.11.0",
   "devDependencies": {
+    "@neondatabase/serverless": "^1.0.2",
     "@types/pg": "^8.15.6",
-    "drizzle-kit": "^0.31.7",
-    "tsx": "^4.20.6",
-    "typescript": "^5.9.3"
+    "drizzle-kit": "^0.31.7"
   },
   "dependencies": {
     "@types/cors": "^2.8.19",
@@ -35,6 +36,8 @@
     "multer": "^2.0.2",
     "pg": "^8.16.3",
     "resend": "^6.5.2",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3",
     "xlsx": "^0.18.5"
   }
 }
