@@ -4,6 +4,8 @@ import {
   getRolePermissionsService,
   getRolePermissionsByRoleService,
   removePermissionFromRoleService,
+  getEmployeePermissionsService,
+  getRolePermissionByIdService,
 } from "./rolePermissions.service";
 
 // ASSIGN PERMISSION TO ROLE
@@ -41,6 +43,18 @@ export const getRolePermissionsByRoleController = async (req: Request, res: Resp
   }
 };
 
+//GET ROLE PERMISSION BY ID
+export const getRolePermissionByIdController = async (req: Request, res: Response) => {
+  try {
+    const id = parseInt(req.params.id);
+    const rolePermission = await getRolePermissionByIdService(id);
+    return res.status(200).json({ message: "Role permission retrieved successfully", rolePermission });
+  } catch (error: any) {
+    console.error("Error retrieving role permission by ID:", error);
+    return res.status(500).json({ message: error.message });
+  }
+};
+
 // REMOVE PERMISSION FROM ROLE
 export const removePermissionFromRoleController = async (req: Request, res: Response) => {
   try {
@@ -50,6 +64,18 @@ export const removePermissionFromRoleController = async (req: Request, res: Resp
     return res.status(200).json({ message: result });
   } catch (error: any) {
     console.error("Error removing permission from role:", error);
+    return res.status(500).json({ message: error.message });
+  }
+};
+
+// GET ALL PERMISSIONS OF AN EMPLOYEE THROUGH THEIR ROLES
+export const getEmployeePermissionsController = async (req: Request, res: Response) => {
+  try {
+    const employeeId = parseInt(req.params.employeeId);
+    const permissions = await getEmployeePermissionsService(employeeId);
+    return res.status(200).json({ message: "Employee permissions retrieved successfully", permissions });
+  } catch (error: any) {
+    console.error("Error retrieving employee permissions:", error);
     return res.status(500).json({ message: error.message });
   }
 };

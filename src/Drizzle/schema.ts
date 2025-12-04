@@ -1,9 +1,8 @@
 import { 
   pgEnum, pgTable, serial, varchar, text, integer, timestamp, boolean, date 
 } from "drizzle-orm/pg-core";
-import { relations } from "drizzle-orm";
+import { relations, sql } from "drizzle-orm";
 
-// ENUMS
 export const EmployeeStatusEnum = pgEnum("employee_status", [
   "active",
   "suspended",
@@ -37,7 +36,13 @@ export const LeaveTypeCategoryEnum = pgEnum("leave_type_category", [
   "study",
 ]);
 
-//RBAC TABLES
+export const modules = pgTable("modules", {
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 150 }).notNull().unique(),
+  description: text("description"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 export const roles = pgTable("roles", {
   id: serial("id").primaryKey(),
   name: varchar("name", { length: 100 }).notNull().unique(),
@@ -47,6 +52,7 @@ export const roles = pgTable("roles", {
 
 export const permissions = pgTable("permissions", {
   id: serial("id").primaryKey(),
+  moduleId: integer("module_id").references(() => modules.id).notNull(),
   name: varchar("name", { length: 150 }).notNull().unique(),
   description: text("description"),
   createdAt: timestamp("created_at").defaultNow(),
@@ -59,7 +65,6 @@ export const rolePermissions = pgTable("role_permissions", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
-// DEPARTMENTS
 export const departments = pgTable("departments", {
   id: serial("id").primaryKey(),
   name: varchar("name", { length: 255 }).notNull().unique(),
@@ -68,10 +73,11 @@ export const departments = pgTable("departments", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
-// EMPLOYEES TABLE 
 export const employees = pgTable("employees", {
   id: serial("id").primaryKey(),
-  departmentId: integer("department_id").references(() => departments.id),
+  departmentId: integer("department_id")
+  .references(() => departments.id, { onDelete: "set null" })
+  .default(sql`NULL`),
   reportsTo: integer("reports_to").references((): any => employees.id),
   firstname: varchar("firstname", { length: 255 }).notNull(),
   lastname: varchar("lastname", { length: 255 }).notNull(),
@@ -80,7 +86,6 @@ export const employees = pgTable("employees", {
   gender: GenderEnum("gender").notNull(),
   status: EmployeeStatusEnum("employee_status").default("active"),
   contractType: ContractTypeEnum("contract_type").notNull().default("full_time"),
-  roleId: integer("role_id").references(() => roles.id).notNull(),
   jobTitle: varchar("job_title", { length: 255 }),
   dateHired: date("date_hired"),
   password: varchar("password", { length: 255 }),
@@ -91,7 +96,13 @@ export const employees = pgTable("employees", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-// LEAVE TYPES
+export const userRoles = pgTable("user_roles", {
+  id: serial("id").primaryKey(),
+  employeeId: integer("employee_id").references(() => employees.id).notNull(),
+  roleId: integer("role_id").references(() => roles.id).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 export const leaveTypes = pgTable("leave_types", {
   id: serial("id").primaryKey(),
   name: varchar("name", { length: 255 }).notNull().unique(),
@@ -102,7 +113,6 @@ export const leaveTypes = pgTable("leave_types", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
-// PASSWORD RESET TOKENS
 export const passwordResets = pgTable("password_resets", {
   id: serial("id").primaryKey(),
   email: varchar("email").notNull(),
@@ -110,7 +120,6 @@ export const passwordResets = pgTable("password_resets", {
   expiresAt: timestamp("expires_at").notNull(),
 });
 
-// LEAVE BALANCES
 export const leaveBalances = pgTable("leave_balances", {
   id: serial("id").primaryKey(),
   employeeId: integer("employee_id").references(() => employees.id).notNull(),
@@ -122,7 +131,6 @@ export const leaveBalances = pgTable("leave_balances", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-// LEAVE REQUESTS
 export const leaveRequests = pgTable("leave_requests", {
   id: serial("id").primaryKey(),
   employeeId: integer("employee_id").references(() => employees.id).notNull(),
@@ -140,7 +148,6 @@ export const leaveRequests = pgTable("leave_requests", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-// MULTI-LEVEL APPROVAL WORKFLOW
 export const leaveApprovals = pgTable("leave_approvals", {
   id: serial("id").primaryKey(),
   leaveRequestId: integer("leave_request_id").references(() => leaveRequests.id).notNull(),
@@ -151,7 +158,6 @@ export const leaveApprovals = pgTable("leave_approvals", {
   decidedAt: timestamp("decided_at"),
 });
 
-// HOLIDAYS
 export const publicHolidays = pgTable("public_holidays", {
   id: serial("id").primaryKey(),
   name: varchar("name", { length: 255 }).notNull(),
@@ -159,7 +165,6 @@ export const publicHolidays = pgTable("public_holidays", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
-// NOTIFICATIONS
 export const hrNotifications = pgTable("hr_notifications", {
   id: serial("id").primaryKey(),
   employeeId: integer("employee_id").references(() => employees.id).notNull(),
@@ -169,7 +174,6 @@ export const hrNotifications = pgTable("hr_notifications", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
-// AUDIT LOGS
 export const hrAuditLogs = pgTable("hr_audit_logs", {
   id: serial("id").primaryKey(),
   employeeId: integer("employee_id").references(() => employees.id),
@@ -178,13 +182,20 @@ export const hrAuditLogs = pgTable("hr_audit_logs", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
-// RELATIONS
-export const rolesRelations = relations(roles, ({ many }) => ({
-  employees: many(employees),
-  permissions: many(rolePermissions),
+export const modulesRelations = relations(modules, ({ many }) => ({
+  permissions: many(permissions),
 }));
 
-export const permissionsRelations = relations(permissions, ({ many }) => ({
+export const rolesRelations = relations(roles, ({ many }) => ({
+  permissions: many(rolePermissions),
+  users: many(userRoles),
+}));
+
+export const permissionsRelations = relations(permissions, ({ one, many }) => ({
+  module: one(modules, {
+    fields: [permissions.moduleId],
+    references: [modules.id],
+  }),
   roles: many(rolePermissions),
 }));
 
@@ -199,6 +210,17 @@ export const rolePermissionsRelations = relations(rolePermissions, ({ one }) => 
   }),
 }));
 
+export const userRolesRelations = relations(userRoles, ({ one }) => ({
+  user: one(employees, {
+    fields: [userRoles.employeeId],
+    references: [employees.id],
+  }),
+  role: one(roles, {
+    fields: [userRoles.roleId],
+    references: [roles.id],
+  }),
+}));
+
 export const departmentsRelations = relations(departments, ({ many, one }) => ({
   employees: many(employees),
   manager: one(employees, {
@@ -208,10 +230,10 @@ export const departmentsRelations = relations(departments, ({ many, one }) => ({
 }));
 
 export const employeesRelations = relations(employees, ({ many, one }) => ({
-  role: one(roles, { fields: [employees.roleId], references: [roles.id] }),
   department: one(departments, { fields: [employees.departmentId], references: [departments.id] }),
   manager: one(employees, { fields: [employees.reportsTo], references: [employees.id], relationName: "employee_manager" }),
   subordinates: many(employees, { relationName: "employee_manager" }),
+  roles: many(userRoles),
   leaveRequests: many(leaveRequests),
   leaveBalances: many(leaveBalances),
   approvals: many(leaveApprovals),
@@ -240,7 +262,6 @@ export const leaveBalancesRelations = relations(leaveBalances, ({ one }) => ({
   leaveType: one(leaveTypes, { fields: [leaveBalances.leaveTypeId], references: [leaveTypes.id] }),
 }));
 
-// TYPES
 export type TIEmployee = typeof employees.$inferInsert;
 export type TSEmployee = typeof employees.$inferSelect;
 
@@ -276,3 +297,9 @@ export type TSPermission = typeof permissions.$inferSelect;
 
 export type TIRolePermission = typeof rolePermissions.$inferInsert;
 export type TSRolePermission = typeof rolePermissions.$inferSelect;
+
+export type TIUserRole = typeof userRoles.$inferInsert;
+export type TSUserRole = typeof userRoles.$inferSelect;
+
+export type TIModule = typeof modules.$inferInsert;
+export type TSModule = typeof modules.$inferSelect;

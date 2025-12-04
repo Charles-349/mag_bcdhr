@@ -5,6 +5,8 @@ import permissionRoutes from './permissions/permissions.router';
 import rolePermissionRoutes from './rolePermissions/rolePermissions.router';
 import department from './departments/department.router';
 import cors from 'cors'
+import userRole from './userRole/userRole.router';
+import modulesRoute from './modules/module.router';
 
 const initializeApp = ()=>{
 const app = express();
@@ -24,6 +26,8 @@ roleRoutes(app);
 permissionRoutes(app);
 rolePermissionRoutes(app);
 department(app);
+userRole(app);
+modulesRoute(app);
 
 app.get('/', (req, res) => {
     res.send('Welcome to the Magnate API');

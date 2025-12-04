@@ -13,16 +13,19 @@ import {
   getEmployeeByNameService,
   uploadEmployeesService,
   adminResetEmployeePasswordService,
+  loginEmployeeService,
 } from "./employees.service";
 
 // CREATE EMPLOYEE
 export const addEmployeeController = async (req: Request, res: Response) => {
   try {
     const employee = req.body;
-    await addEmployeeService(employee);
+
+    // Check for bootstrap mode 
+    const result = await addEmployeeService(employee, true); 
 
     return res.status(201).json({
-      message: "Employee created successfully and password sent to employee email",
+      message: result.message,
     });
   } catch (error: any) {
     console.error("Error creating employee:", error);
@@ -42,6 +45,29 @@ export const uploadEmployeesController = async (req: Request, res: Response) => 
   } catch (error: any) {
     console.error("Error uploading employees:", error);
     return res.status(500).json({ message: error.message });
+  }
+};
+
+// LOGIN EMPLOYEE
+export const loginEmployeeController = async (req: Request, res: Response) => {
+  try {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({ message: "Email and password are required" });
+    }
+
+    const result = await loginEmployeeService(email, password);
+
+    return res.status(200).json({
+      message: result.message,
+      token: result.token,
+      employee: result.employee,
+      permissions: result.permissions
+    });
+  } catch (error: any) {
+    console.error("Error logging in employee:", error);
+    return res.status(401).json({ message: error.message });
   }
 };
 

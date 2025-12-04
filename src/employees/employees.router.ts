@@ -15,6 +15,7 @@ import {
   getEmployeeByNameController,
   uploadEmployeesController,
   adminResetEmployeePasswordController,
+  loginEmployeeController,
 } from "./employees.controller";
 
 import { checkPermission } from "../middleware/bearAuth";
@@ -25,7 +26,7 @@ const employee = (app: Express) => {
 
   // CREATE Employee
   app.route("/employees").post(
-    // checkPermission("create_employee"), 
+    checkPermission("create_employee", { allowBootstrap: true }), 
     async (req, res, next) => {
       try {
         await addEmployeeController(req, res);
@@ -47,6 +48,15 @@ const employee = (app: Express) => {
       }
     }
   );
+
+    // LOGIN ROUTE
+  app.route("/employees/login").post(async (req, res, next) => {
+    try {
+      await loginEmployeeController(req, res);
+    } catch (error) {
+      next(error);
+    }
+  });
 
   // ADMIN RESET EMPLOYEE PASSWORD
   app.route("/employees/:id/reset-password").post(
@@ -86,7 +96,7 @@ const employee = (app: Express) => {
 
   // GET All Employees
   app.route("/employees").get(
-    checkPermission("view_employee"),
+    // checkPermission("view_employee"),
     async (req, res, next) => {
       try {
         await getEmployeesController(req, res);
@@ -122,7 +132,7 @@ const employee = (app: Express) => {
 
   // DELETE Employee by ID
   app.route("/employees/:id").delete(
-    checkPermission("delete_employee"),
+    // checkPermission("delete_employee"),
     async (req, res, next) => {
       try {
         await deleteEmployeeController(req, res);

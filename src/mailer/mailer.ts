@@ -12,6 +12,7 @@ export const sendEmail = async (
     const result = await resend.emails.send({
       from: "Magnate Ventures Ltd <onboarding@resend.dev>", 
       to: email,
+      // to: "wamahiucharles123@gmail.com",
       subject,
       text: message,
       html: html || `<p>${message}</p>`,

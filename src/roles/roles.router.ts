@@ -27,7 +27,7 @@ app.route("/roles").post(
 
   // GET ALL ROLES
   app.route("/roles").get(
-    checkPermission("view_role"),
+    // checkPermission("view_role"),
     async (req, res, next) => {
       try {
         await getRolesController(req, res);
@@ -39,7 +39,7 @@ app.route("/roles").post(
 
   // GET ROLE BY ID
   app.route("/roles/:id").get(
-    checkPermission("view_role"),
+    // checkPermission("view_role"),
     async (req, res, next) => {
       try {
         await getRoleByIdController(req, res);
@@ -51,7 +51,7 @@ app.route("/roles").post(
 
   // UPDATE ROLE
   app.route("/roles/:id").put(
-    checkPermission("update_role"),
+    // checkPermission("update_role"),
     async (req, res, next) => {
       try {
         await updateRoleController(req, res);
@@ -63,7 +63,7 @@ app.route("/roles").post(
 
   // DELETE ROLE
   app.route("/roles/:id").delete(
-    checkPermission("delete_role"),
+    // checkPermission("delete_role"),
     async (req, res, next) => {
       try {
         await deleteRoleController(req, res);

@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import db from "../Drizzle/db";
 import { roles, permissions, rolePermissions, TIEmployee } from "../Drizzle/schema";
 
@@ -34,6 +34,9 @@ export const updateRoleService = async (id: number, data: Partial<{ name: string
 
 // DELETE ROLE
 export const deleteRoleService = async (id: number) => {
+  // Remove role-permission links
+  await db.delete(rolePermissions).where(eq(rolePermissions.roleId, id));
+  // TODO: optionally remove user-role links if needed
   const deleted = await db.delete(roles).where(eq(roles.id, id)).returning();
   if (deleted.length === 0) return null;
   return "Role deleted successfully";
@@ -41,9 +44,14 @@ export const deleteRoleService = async (id: number) => {
 
 // ASSIGN PERMISSIONS TO ROLE
 export const assignPermissionsService = async (roleId: number, permissionIds: number[]) => {
+  const values = [];
   for (const permissionId of permissionIds) {
-    await db.insert(rolePermissions).values({ roleId, permissionId });
+    const existing = await db.query.rolePermissions.findFirst({
+      where: and(eq(rolePermissions.roleId, roleId), eq(rolePermissions.permissionId, permissionId))
+    });
+    if (!existing) values.push({ roleId, permissionId });
   }
+  if (values.length > 0) await db.insert(rolePermissions).values(values);
   return "Permissions assigned successfully";
 };
 

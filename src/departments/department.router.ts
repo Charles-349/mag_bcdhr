@@ -14,7 +14,7 @@ import { checkPermission } from "../middleware/bearAuth";
 const department = (app: Express) => {
   // CREATE DEPARTMENT
   app.route("/departments").post(
-    checkPermission("create_department"),
+    checkPermission("create_department", { allowBootstrap: true }),
     async (req, res, next) => {
       try {
         await addDepartmentController(req, res);
