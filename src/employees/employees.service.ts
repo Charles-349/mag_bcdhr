@@ -684,15 +684,24 @@ export const addEmployeeService = async (
   employee: TIUser & { role?: string; employeeData?: Partial<TIEmployee> },
   allowBootstrap = false
 ) => {
-  // Check existing employees
-  const [{ count }] = await db.select({ count: sql<number>`count(*)` }).from(employees);
+
+  // Count existing employees
+  const [{ count }] = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(employees);
+
   const totalEmployees = Number(count);
+
 
   const plainPassword = generatePassword();
   const hashedPassword = await bcrypt.hash(plainPassword, 12);
 
-  // Super Admin bootstrap
+  let bootstrapJustHappened = false;
+
   if (totalEmployees === 0 && allowBootstrap) {
+    bootstrapJustHappened = true;
+
+    //Create super admin user
     const superAdminUser = await db.insert(users).values({
       firstname: "Super",
       lastname: "Admin",
@@ -701,58 +710,55 @@ export const addEmployeeService = async (
       gender: "male",
     }).returning();
 
-    const userId = superAdminUser[0].id;
+    const superAdminUserId = superAdminUser[0].id;
 
-    const superAdminEmployee = await db.insert(employees).values({
-      userId,
-      jobTitle: "System Administrator",
-      status: "active",
-      contractType: "full_time",
-      dateHired: new Date().toISOString(),
-    }).returning();
+    //Ensure super_admin role exists
+    let superAdminRole = await db.query.roles.findFirst({
+      where: eq(roles.name, "super_admin"),
+    });
 
-    // Super admin role
-    let superAdminRole = await db.query.roles.findFirst({ where: eq(roles.name, "super_admin") });
     if (!superAdminRole) {
-      const role = await db.insert(roles).values({
+      const insertedRole = await db.insert(roles).values({
         name: "super_admin",
         description: "System Super Administrator with full access",
       }).returning();
-      superAdminRole = role[0];
+      superAdminRole = insertedRole[0];
     }
 
-    // Assign all permissions to super_admin role
+    // Assign role to super admin
+    await db.insert(userRoles).values({
+      userId: superAdminUserId,
+      roleId: superAdminRole.id,
+    });
+
+    //Assign all permissions to super_admin
     const allPermissions = await db.query.permissions.findMany();
     for (const perm of allPermissions) {
-      const exists = await db.query.rolePermissions.findFirst({
-        where: eq(rolePermissions.permissionId, perm.id),
-      });
-      if (!exists) {
-        await db.insert(rolePermissions).values({
-          permissionId: perm.id,
-          roleId: superAdminRole.id,
-        });
-      }
+      await db.insert(rolePermissions).values({
+        permissionId: perm.id,
+        roleId: superAdminRole.id,
+      }).onConflictDoNothing();
     }
 
-    // Assign role to user
-    await db.insert(userRoles).values({ userId, roleId: superAdminRole.id });
-
-    // Send password reset email
+    //Send password reset email
     const token = await createPasswordResetToken("wamahiucharles123@gmail.com");
     const resetLink = `${process.env.FRONTEND_URL}/reset-password?token=${token}`;
-    await sendEmail(
+
+   await sendEmail(
       "wamahiucharles123@gmail.com",
       "Your Super Admin Account",
-      `Temporary password: ${plainPassword}\nReset: ${resetLink}`,
-      `<p>Temporary password: ${plainPassword}</p><a href="${resetLink}">Reset Password</a>`
+      `Hello Super Admin,\n\nYour system Super Admin account has been created.\nTemporary Password: ${plainPassword}\nPlease reset your password using the link below:\n${resetLink}\nThis link expires in 30 minutes.`,
+     `<p>Hello Super Admin,</p>
+     <p>Your system Super Admin account has been created.</p>
+     <p><strong>Temporary Password:</strong> ${plainPassword}</p>
+      <p>Please reset your password by clicking the button below:</p>
+     <a href="${resetLink}" style="background:#007bff;color:white;padding:10px 20px;border-radius:6px;text-decoration:none;display:inline-block;margin-top:10px;">Reset Password</a>
+      <p>This link expires in 30 minutes.</p>`
     );
 
-    return { message: "Super admin created successfully" };
   }
 
-  // Normal employee creation
-  const user = await db.insert(users).values({
+  const newUser = await db.insert(users).values({
     firstname: employee.firstname,
     lastname: employee.lastname,
     email: employee.email,
@@ -761,44 +767,72 @@ export const addEmployeeService = async (
     imageUrl: employee.imageUrl || undefined,
   }).returning();
 
-  const userId = user[0].id;
+  const newUserId = newUser[0].id;
 
-  // Resolve role
+  // ROLE — resolve or auto-create
   let roleId: number | null = null;
+
   if (employee.role) {
-    let roleRecord = await db.query.roles.findFirst({ where: eq(roles.name, employee.role) });
+    let roleRecord = await db.query.roles.findFirst({
+      where: eq(roles.name, employee.role),
+    });
+
     if (!roleRecord) {
-      const insertedRole = await db.insert(roles).values({
+      const createdRole = await db.insert(roles).values({
         name: employee.role,
         description: `${employee.role} role created automatically`,
       }).returning();
-      roleRecord = insertedRole[0];
+      roleRecord = createdRole[0];
     }
+
     roleId = roleRecord.id;
   }
 
-  // Insert employee record
+  // EMPLOYEE RECORD
   const employeeRecord = await db.insert(employees).values({
-    userId,
+    userId: newUserId,
     ...employee.employeeData,
     departmentId: employee.employeeData?.departmentId ?? null,
   }).returning();
 
+  // Assign role
   if (roleId) {
-    await db.insert(userRoles).values({ userId, roleId });
+    await db.insert(userRoles).values({
+      userId: newUserId,
+      roleId,
+    });
   }
 
-  // Send password reset email
+  // Send password setup email
   const token = await createPasswordResetToken(employee.email);
   const resetLink = `${process.env.FRONTEND_URL}/reset-password?token=${token}`;
+
   await sendEmail(
-    employee.email,
-    "Your Account & Password Reset",
-    `Temporary Password: ${plainPassword}\nReset: ${resetLink}`,
-    `<p>Temporary Password: ${plainPassword}</p><a href="${resetLink}">Reset Password</a>`
+     employee.email,
+     "Your Account & Password Reset",
+     `Hello ${employee.firstname},\n\nYour employee HRMS account has been created.\nTemporary Password: ${plainPassword}\nPlease reset your password using the link below:\n${resetLink}\nThis link expires in 30 minutes.\nWelcome onboard!`,
+   `<p>Hello ${employee.firstname},</p>
+    <p>Your employee HRMS account has been created.</p>
+    <p><strong>Temporary Password:</strong> ${plainPassword}</p>
+     <p>Please reset your password by clicking the button below:</p>
+    <a href="${resetLink}" style="background:#007bff;color:white;padding:10px 20px;border-radius:6px;text-decoration:none;display:inline-block;margin-top:10px;">Reset Password</a>
+    <p>This link expires in 30 minutes.</p>
+     <p>Welcome onboard!</p>`
   );
 
-  return { message: "Employee added successfully. Credentials sent to email." };
+
+  if (bootstrapJustHappened) {
+    return {
+      message: "Super admin and first employee created successfully",
+      bootstrap: true,
+      employee: employeeRecord[0],
+    };
+  }
+
+  return {
+    message: "Employee added successfully. Credentials sent to email.",
+    employee: employeeRecord[0],
+  };
 };
 
 // LOGIN EMPLOYEE
