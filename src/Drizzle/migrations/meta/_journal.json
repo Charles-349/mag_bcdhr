@@ -15,6 +15,13 @@
       "when": 1764913323413,
       "tag": "0001_mighty_ikaris",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1764957976001,
+      "tag": "0002_flowery_northstar",
+      "breakpoints": true
     }
   ]
 }

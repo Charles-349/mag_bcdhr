@@ -3,6 +3,7 @@ import {
 } from "drizzle-orm/pg-core";
 import { relations, sql } from "drizzle-orm";
 
+
 export const EmployeeStatusEnum = pgEnum("employee_status", [
   "active",
   "suspended",
@@ -36,6 +37,35 @@ export const LeaveTypeCategoryEnum = pgEnum("leave_type_category", [
   "study",
 ]);
 
+
+export const companies = pgTable("companies", {
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 255 }).notNull().unique(),
+  address: text("address"),
+  email: varchar("email", { length: 255 }).notNull().unique(),
+  phone: varchar("phone", { length: 50 }),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+
+export const users = pgTable("users", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").references(() => companies.id),
+  firstname: varchar("firstname", { length: 255 }).notNull(),
+  lastname: varchar("lastname", { length: 255 }).notNull(),
+  email: varchar("email", { length: 255 }).notNull().unique(),
+  password: varchar("password", { length: 255 }),
+  gender: GenderEnum("gender").notNull(),
+  imageUrl: varchar("image_url", { length: 255 }).default(
+    "https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y"
+  ),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+
 export const modules = pgTable("modules", {
   id: serial("id").primaryKey(),
   name: varchar("name", { length: 150 }).notNull().unique(),
@@ -65,8 +95,17 @@ export const rolePermissions = pgTable("role_permissions", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+export const userRoles = pgTable("user_roles", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id).notNull(),
+  roleId: integer("role_id").references(() => roles.id).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+
 export const departments = pgTable("departments", {
   id: serial("id").primaryKey(),
+  companyId: integer("company_id").references(() => companies.id).notNull(),
   name: varchar("name", { length: 255 }).notNull().unique(),
   description: text("description"),
   managerId: integer("manager_id"),
@@ -75,41 +114,28 @@ export const departments = pgTable("departments", {
 
 export const employees = pgTable("employees", {
   id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id).notNull(),
   departmentId: integer("department_id")
-  .references(() => departments.id, { onDelete: "set null" })
-  .default(sql`NULL`),
+    .references(() => departments.id, { onDelete: "set null" })
+    .default(sql`NULL`),
   reportsTo: integer("reports_to").references((): any => employees.id),
-  firstname: varchar("firstname", { length: 255 }).notNull(),
-  lastname: varchar("lastname", { length: 255 }).notNull(),
-  email: varchar("email", { length: 255 }).notNull().unique(),
   phone: varchar("phone", { length: 50 }),
-  gender: GenderEnum("gender").notNull(),
   status: EmployeeStatusEnum("employee_status").default("active"),
   contractType: ContractTypeEnum("contract_type").notNull().default("full_time"),
   jobTitle: varchar("job_title", { length: 255 }),
   dateHired: date("date_hired"),
-  password: varchar("password", { length: 255 }),
-  imageUrl: varchar("image_url", { length: 255 }).default(
-    "https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y"
-  ),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-export const userRoles = pgTable("user_roles", {
-  id: serial("id").primaryKey(),
-  employeeId: integer("employee_id").references(() => employees.id).notNull(),
-  roleId: integer("role_id").references(() => roles.id).notNull(),
-  createdAt: timestamp("created_at").defaultNow(),
-});
 
 export const leaveTypes = pgTable("leave_types", {
   id: serial("id").primaryKey(),
+  companyId: integer("company_id").references(() => companies.id).notNull(),
   name: varchar("name", { length: 255 }).notNull().unique(),
   category: LeaveTypeCategoryEnum("leave_type_category").notNull(),
   maxDaysPerYear: integer("max_days_per_year").notNull(),
   requiresApproval: boolean("requires_approval").default(true),
-  restrictedToGender: varchar("restricted_to_gender", { length: 50 }),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -159,6 +185,7 @@ export const leaveApprovals = pgTable("leave_approvals", {
   decidedAt: timestamp("decided_at"),
 });
 
+
 export const publicHolidays = pgTable("public_holidays", {
   id: serial("id").primaryKey(),
   name: varchar("name", { length: 255 }).notNull(),
@@ -183,43 +210,12 @@ export const hrAuditLogs = pgTable("hr_audit_logs", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
-export const modulesRelations = relations(modules, ({ many }) => ({
-  permissions: many(permissions),
-}));
 
-export const rolesRelations = relations(roles, ({ many }) => ({
-  permissions: many(rolePermissions),
-  users: many(userRoles),
-}));
 
-export const permissionsRelations = relations(permissions, ({ one, many }) => ({
-  module: one(modules, {
-    fields: [permissions.moduleId],
-    references: [modules.id],
-  }),
-  roles: many(rolePermissions),
-}));
-
-export const rolePermissionsRelations = relations(rolePermissions, ({ one }) => ({
-  role: one(roles, {
-    fields: [rolePermissions.roleId],
-    references: [roles.id],
-  }),
-  permission: one(permissions, {
-    fields: [rolePermissions.permissionId],
-    references: [permissions.id],
-  }),
-}));
-
-export const userRolesRelations = relations(userRoles, ({ one }) => ({
-  user: one(employees, {
-    fields: [userRoles.employeeId],
-    references: [employees.id],
-  }),
-  role: one(roles, {
-    fields: [userRoles.roleId],
-    references: [roles.id],
-  }),
+export const usersRelations = relations(users, ({ many, one }) => ({
+  roles: many(userRoles),
+  employeeProfile: many(employees),
+  company: one(companies, { fields: [users.companyId], references: [companies.id] }),
 }));
 
 export const departmentsRelations = relations(departments, ({ many, one }) => ({
@@ -228,13 +224,20 @@ export const departmentsRelations = relations(departments, ({ many, one }) => ({
     fields: [departments.managerId],
     references: [employees.id],
   }),
+  company: one(companies, { fields: [departments.companyId], references: [companies.id] }),
+}));
+
+export const leaveTypesRelations = relations(leaveTypes, ({ many, one }) => ({
+  leaveRequests: many(leaveRequests),
+  leaveBalances: many(leaveBalances),
+  company: one(companies, { fields: [leaveTypes.companyId], references: [companies.id] }),
 }));
 
 export const employeesRelations = relations(employees, ({ many, one }) => ({
+  user: one(users, { fields: [employees.userId], references: [users.id] }),
   department: one(departments, { fields: [employees.departmentId], references: [departments.id] }),
   manager: one(employees, { fields: [employees.reportsTo], references: [employees.id], relationName: "employee_manager" }),
   subordinates: many(employees, { relationName: "employee_manager" }),
-  roles: many(userRoles),
   leaveRequests: many(leaveRequests),
   leaveBalances: many(leaveBalances),
   approvals: many(leaveApprovals),
@@ -242,26 +245,9 @@ export const employeesRelations = relations(employees, ({ many, one }) => ({
   auditLogs: many(hrAuditLogs),
 }));
 
-export const leaveTypesRelations = relations(leaveTypes, ({ many }) => ({
-  leaveRequests: many(leaveRequests),
-  leaveBalances: many(leaveBalances),
-}));
 
-export const leaveRequestsRelations = relations(leaveRequests, ({ one, many }) => ({
-  employee: one(employees, { fields: [leaveRequests.employeeId], references: [employees.id] }),
-  leaveType: one(leaveTypes, { fields: [leaveRequests.leaveTypeId], references: [leaveTypes.id] }),
-  approvals: many(leaveApprovals),
-}));
-
-export const leaveApprovalsRelations = relations(leaveApprovals, ({ one }) => ({
-  leaveRequest: one(leaveRequests, { fields: [leaveApprovals.leaveRequestId], references: [leaveRequests.id] }),
-  approver: one(employees, { fields: [leaveApprovals.approverId], references: [employees.id] }),
-}));
-
-export const leaveBalancesRelations = relations(leaveBalances, ({ one }) => ({
-  employee: one(employees, { fields: [leaveBalances.employeeId], references: [employees.id] }),
-  leaveType: one(leaveTypes, { fields: [leaveBalances.leaveTypeId], references: [leaveTypes.id] }),
-}));
+export type TIUser = typeof users.$inferInsert;
+export type TSUser = typeof users.$inferSelect;
 
 export type TIEmployee = typeof employees.$inferInsert;
 export type TSEmployee = typeof employees.$inferSelect;
@@ -304,3 +290,6 @@ export type TSUserRole = typeof userRoles.$inferSelect;
 
 export type TIModule = typeof modules.$inferInsert;
 export type TSModule = typeof modules.$inferSelect;
+
+export type TICompany = typeof companies.$inferInsert;
+export type TSCompany = typeof companies.$inferSelect;

@@ -1,15 +1,14 @@
-
 import { eq } from "drizzle-orm";
 import db from "../Drizzle/db";
-import { userRoles, roles, employees } from "../Drizzle/schema";
+import { userRoles, roles, users } from "../Drizzle/schema";
 
 // CREATE USER ROLE 
-export const addUserRoleService = async (employeeId: number, roleId: number) => {
-  // check employee exists
-  const employee = await db.query.employees.findFirst({
-    where: eq(employees.id, employeeId)
+export const addUserRoleService = async (userId: number, roleId: number) => {
+  // check user exists
+  const user = await db.query.users.findFirst({
+    where: eq(users.id, userId)
   });
-  if (!employee) throw new Error("Employee not found");
+  if (!user) throw new Error("User not found");
 
   // check role exists
   const role = await db.query.roles.findFirst({
@@ -19,17 +18,17 @@ export const addUserRoleService = async (employeeId: number, roleId: number) => 
 
   // check duplicate
   const exists = await db.query.userRoles.findFirst({
-    where: eq(userRoles.employeeId, employeeId)
+    where: eq(userRoles.userId, userId)
   });
   if (exists)
-    throw new Error("This employee already has a role assigned. Use update.");
+    throw new Error("This user already has a role assigned. Use update.");
 
   await db.insert(userRoles).values({
-    employeeId,
+    userId,
     roleId
   });
 
-  return "Role assigned to employee successfully";
+  return "Role assigned to user successfully";
 };
 
 // GET ALL USER ROLES
@@ -37,14 +36,15 @@ export const getAllUserRolesService = async () => {
   return await db
     .select({
       id: userRoles.id,
-      employeeId: userRoles.employeeId,
+      userId: userRoles.userId,
       roleId: userRoles.roleId,
-      employee: employees.firstname,
-      lastname: employees.lastname,
+      firstname: users.firstname,
+      lastname: users.lastname,
+      email: users.email,
       role: roles.name
     })
     .from(userRoles)
-    .leftJoin(employees, eq(userRoles.employeeId, employees.id))
+    .leftJoin(users, eq(userRoles.userId, users.id))
     .leftJoin(roles, eq(userRoles.roleId, roles.id));
 };
 
@@ -53,14 +53,15 @@ export const getUserRoleByIdService = async (id: number) => {
   const record = await db
     .select({
       id: userRoles.id,
-      employeeId: userRoles.employeeId,
+      userId: userRoles.userId,
       roleId: userRoles.roleId,
-      employee: employees.firstname,
-      lastname: employees.lastname,
+      firstname: users.firstname,
+      lastname: users.lastname,
+      email: users.email,
       role: roles.name
     })
     .from(userRoles)
-    .leftJoin(employees, eq(userRoles.employeeId, employees.id))
+    .leftJoin(users, eq(userRoles.userId, users.id))
     .leftJoin(roles, eq(userRoles.roleId, roles.id))
     .where(eq(userRoles.id, id));
 
