@@ -706,6 +706,7 @@ export const addEmployeeService = async (
       firstname: "Super",
       lastname: "Admin",
       email: "wamahiucharles123@gmail.com",
+      phone: "+254701656349",
       password: hashedPassword,
       gender: "male",
     }).returning();
@@ -762,6 +763,7 @@ export const addEmployeeService = async (
     firstname: employee.firstname,
     lastname: employee.lastname,
     email: employee.email,
+    phone: employee.phone,
     password: hashedPassword,
     gender: employee.gender,
     imageUrl: employee.imageUrl || undefined,
@@ -793,6 +795,8 @@ export const addEmployeeService = async (
     userId: newUserId,
     ...employee.employeeData,
     departmentId: employee.employeeData?.departmentId ?? null,
+    jobTitle: employee.employeeData?.jobTitle ?? "Employee",
+    dateHired: employee.employeeData?.dateHired ? new Date(employee.employeeData.dateHired).toISOString() : new Date().toISOString(),
   }).returning();
 
   // Assign role
@@ -837,7 +841,7 @@ export const addEmployeeService = async (
 
 // LOGIN EMPLOYEE
 export const loginUserService = async (email: string, password: string) => {
-  // Fetch user with roles and nested permissions
+  // Fetch user with roles, role permissions, and employee profile
   const user = await db.query.users.findFirst({
     where: eq(users.email, email),
     with: {
@@ -845,13 +849,16 @@ export const loginUserService = async (email: string, password: string) => {
         with: {
           role: {
             with: {
-              permissions: {
-                with: { permission: true },
+              rolePermissions: {
+                with: {
+                  permission: true,
+                },
               },
             },
           },
         },
       },
+      employeeProfile: true, // include employee profile if needed
     },
   });
 
@@ -861,25 +868,23 @@ export const loginUserService = async (email: string, password: string) => {
   const isValid = await bcrypt.compare(password, user.password);
   if (!isValid) throw new Error("Invalid email or password");
 
-  // Explicit type for role + permissions
+  // Flatten permissions
   type RoleWithPermissions = {
     role?: {
       name: string;
-      permissions: { permission: { name: string } }[];
+      rolePermissions: { permission: { name: string } }[];
     } | null;
   };
 
   const rolesWithPermissions = user.roles as RoleWithPermissions[];
 
-  // Flatten permissions
   const permissionsList = rolesWithPermissions
-    .flatMap((r) => r.role?.permissions.map((rp) => rp.permission.name) ?? [])
+    .flatMap((r) => r.role?.rolePermissions.map((rp) => rp.permission.name) ?? [])
     .filter(Boolean);
 
-  // Extract role names
   const roleNames = rolesWithPermissions.map((r) => r.role?.name).filter(Boolean);
 
-  // Generate JWT token
+  // Generate JWT
   const token = signToken({
     id: user.id,
     email: user.email,
@@ -895,7 +900,6 @@ export const loginUserService = async (email: string, password: string) => {
   };
 };
 
-
 // ADMIN RESET PASSWORD
 export const adminResetEmployeePasswordService = async (userId: number) => {
   const user = await db.query.users.findFirst({ where: eq(users.id, userId) });
@@ -909,12 +913,46 @@ export const adminResetEmployeePasswordService = async (userId: number) => {
   const token = await createPasswordResetToken(user.email);
   const resetLink = `${process.env.FRONTEND_URL}/reset-password?token=${token}`;
 
-  await sendEmail(
-    user.email,
-    "Your Password Has Been Reset by Admin",
-    `Temporary Password: ${plain}\nReset: ${resetLink}`,
-    `<p>Temporary Password: ${plain}</p><a href="${resetLink}">Reset Password</a>`
+   await sendEmail(
+     user.email,
+     "Your Password Has Been Reset by Admin",
+     `
+ Hello ${user.firstname},
+
+ Your password has been reset by the HR/Admin team.
+
+ Temporary Password: ${plain}
+
+ You may login with this password, OR set a new one using this link:
+ ${resetLink}
+
+ This link expires in 30 minutes.
+     `,
+     `
+     <p>Hello ${user.firstname},</p>
+     <p>Your password has been reset by the HR/Admin team.</p>
+
+     <p><strong>Temporary Password:</strong> ${plain}</p>
+
+    <p>You may continue using this password, or you can click the button below to set a new password:</p>
+
+     <a href="${resetLink}"
+       style="
+          background:#dc3545;
+          color:white;
+          padding:10px 20px;
+         border-radius:6px;
+         text-decoration:none;
+         display:inline-block;
+          margin-top:10px;
+       ">
+        Reset Password
+    </a>
+
+     <p>This link expires in 30 minutes.</p>
+    `
   );
+
 
   return "Password reset successful & email sent";
 };
@@ -923,7 +961,7 @@ export const adminResetEmployeePasswordService = async (userId: number) => {
 export const getEmployeeByEmailService = async (email: string) => {
   return db.query.users.findFirst({
     where: eq(users.email, email),
-    with: { employeeProfile: true, roles: { with: { role: { with: { permissions: true } } } } },
+    with: { employeeProfile: true, roles: { with: { role: { with: { rolePermissions: true } } } } },
   });
 };
 

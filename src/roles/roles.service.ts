@@ -13,7 +13,7 @@ export const addRoleService = async (data: { name: string; description?: string 
 // GET ALL ROLES
 export const getRolesService = async () => {
   return await db.query.roles.findMany({
-    with: { permissions: { with: { permission: true } } },
+    with: { rolePermissions: { with: { permission: true } } },
   });
 };
 
@@ -21,7 +21,7 @@ export const getRolesService = async () => {
 export const getRoleByIdService = async (id: number) => {
   return await db.query.roles.findFirst({
     where: eq(roles.id, id),
-    with: { permissions: { with: { permission: true } } },
+    with: { rolePermissions: { with: { permission: true } } },
   });
 };
 

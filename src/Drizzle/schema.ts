@@ -56,6 +56,7 @@ export const users = pgTable("users", {
   firstname: varchar("firstname", { length: 255 }).notNull(),
   lastname: varchar("lastname", { length: 255 }).notNull(),
   email: varchar("email", { length: 255 }).notNull().unique(),
+  phone: varchar("phone", { length: 50 }),
   password: varchar("password", { length: 255 }),
   gender: GenderEnum("gender").notNull(),
   imageUrl: varchar("image_url", { length: 255 }).default(
@@ -119,7 +120,6 @@ export const employees = pgTable("employees", {
     .references(() => departments.id, { onDelete: "set null" })
     .default(sql`NULL`),
   reportsTo: integer("reports_to").references((): any => employees.id),
-  phone: varchar("phone", { length: 50 }),
   status: EmployeeStatusEnum("employee_status").default("active"),
   contractType: ContractTypeEnum("contract_type").notNull().default("full_time"),
   jobTitle: varchar("job_title", { length: 255 }),
@@ -244,6 +244,21 @@ export const employeesRelations = relations(employees, ({ many, one }) => ({
   notifications: many(hrNotifications),
   auditLogs: many(hrAuditLogs),
 }));
+
+export const userRolesRelations = relations(userRoles, ({ one }) => ({
+  user: one(users, { fields: [userRoles.userId], references: [users.id] }),
+  role: one(roles, { fields: [userRoles.roleId], references: [roles.id] }),
+}));
+
+export const rolePermissionsRelations = relations(rolePermissions, ({ one }) => ({
+  role: one(roles, { fields: [rolePermissions.roleId], references: [roles.id] }),
+  permission: one(permissions, { fields: [rolePermissions.permissionId], references: [permissions.id] }),
+}));
+
+export const rolesRelations = relations(roles, ({ many }) => ({
+  rolePermissions: many(rolePermissions),
+}));
+
 
 
 export type TIUser = typeof users.$inferInsert;
