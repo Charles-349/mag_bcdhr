@@ -75,7 +75,7 @@ export const getEmployeePermissionsService = async (employeeId: number) => {
 
   // Fetch all roles of the employee
   const userRolesList = await db.query.userRoles.findMany({
-    where: eq(userRoles.employeeId, employeeId),
+    where: eq(userRoles.userId, employeeId),
     with: { role: true },
   });
 
@@ -92,7 +92,7 @@ export const getEmployeePermissionsService = async (employeeId: number) => {
   // Return unique permissions
   const permissionsSet = new Map<number, typeof permissions.$inferSelect>();
   rolePermissionsList.forEach(rp => {
-    if (rp.permission) permissionsSet.set(rp.permission.id, rp.permission);
+    if (rp.permission) permissionsSet.set((rp.permission as typeof permissions.$inferSelect).id, rp.permission);
   });
 
   return Array.from(permissionsSet.values());

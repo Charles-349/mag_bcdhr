@@ -8,6 +8,7 @@ import cors from 'cors'
 import userRole from './userRole/userRole.router';
 import modulesRoute from './modules/module.router';
 import leaveTypes from './leaveTypes/leaveTypes.router';
+import company from './company/company.router';
 
 const initializeApp = ()=>{
 const app = express();
@@ -30,6 +31,7 @@ department(app);
 userRole(app);
 modulesRoute(app);
 leaveTypes(app);
+company(app);
 
 app.get('/', (req, res) => {
     res.send('Welcome to the Magnate API');
