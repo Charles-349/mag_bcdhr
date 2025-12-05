@@ -26,7 +26,7 @@ const userRole = (app: Express) => {
 
   // GET ALL USER ROLES
   app.route("/user-roles").get(
-    // checkPermission("view_user_roles"),
+    checkPermission("view_user_roles"),
     async (req, res, next) => {
       try {
         await getAllUserRolesController(req, res);
@@ -38,7 +38,7 @@ const userRole = (app: Express) => {
 
   // GET USER ROLE BY ID
   app.route("/user-roles/:id").get(
-    // checkPermission("view_user_roles"),
+    checkPermission("view_user_roles"),
     async (req, res, next) => {
       try {
         await getUserRoleByIdController(req, res);
@@ -50,7 +50,7 @@ const userRole = (app: Express) => {
 
   // UPDATE USER ROLE
   app.route("/user-roles/:id").put(
-    // checkPermission("update_user_role"),
+    checkPermission("update_user_role"),
     async (req, res, next) => {
       try {
         await updateUserRoleController(req, res);
@@ -62,7 +62,7 @@ const userRole = (app: Express) => {
 
   // DELETE USER ROLE
   app.route("/user-roles/:id").delete(
-    // checkPermission("delete_user_role"),
+    checkPermission("delete_user_role"),
     async (req, res, next) => {
       try {
         await deleteUserRoleController(req, res);

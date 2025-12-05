@@ -1,0 +1,1 @@
+ALTER TABLE "leave_types" ADD COLUMN "updated_at" timestamp DEFAULT now();

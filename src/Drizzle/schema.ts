@@ -111,6 +111,7 @@ export const leaveTypes = pgTable("leave_types", {
   requiresApproval: boolean("requires_approval").default(true),
   restrictedToGender: varchar("restricted_to_gender", { length: 50 }),
   createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 export const passwordResets = pgTable("password_resets", {

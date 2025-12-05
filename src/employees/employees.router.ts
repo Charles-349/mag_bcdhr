@@ -96,7 +96,7 @@ const employee = (app: Express) => {
 
   // GET All Employees
   app.route("/employees").get(
-    // checkPermission("view_employee"),
+    checkPermission("view_employee"),
     async (req, res, next) => {
       try {
         await getEmployeesController(req, res);
@@ -132,7 +132,7 @@ const employee = (app: Express) => {
 
   // DELETE Employee by ID
   app.route("/employees/:id").delete(
-    // checkPermission("delete_employee"),
+    checkPermission("delete_employee"),
     async (req, res, next) => {
       try {
         await deleteEmployeeController(req, res);
