@@ -240,6 +240,15 @@ export const rolesRelations = relations(roles, ({ many }) => ({
   rolePermissions: many(rolePermissions),
 }));
 
+export const permissionsRelations = relations(permissions, ({ one, many }) => ({
+  module: one(modules, {
+    fields: [permissions.moduleId],
+    references: [modules.id],
+  }),
+  rolePermissions: many(rolePermissions),
+}));
+
+
 
 
 export type TIUser = typeof users.$inferInsert;
