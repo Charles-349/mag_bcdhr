@@ -2,6 +2,7 @@ import {
   pgEnum, pgTable, serial, varchar, text, integer, timestamp, boolean, date 
 } from "drizzle-orm/pg-core";
 import { relations, sql } from "drizzle-orm";
+import company from "../company/company.router";
 
 
 export const EmployeeStatusEnum = pgEnum("employee_status", [
@@ -11,30 +12,11 @@ export const EmployeeStatusEnum = pgEnum("employee_status", [
 ]);
 
 export const GenderEnum = pgEnum("gender", ["male", "female"]);
-
-export const ContractTypeEnum = pgEnum("contract_type", [
-  "full_time",
-  "part_time",
-  "intern",
-  "contract",
-  "casual",
-]);
-
 export const LeaveStatusEnum = pgEnum("leave_status", [
   "pending",
   "approved",
   "rejected",
   "cancelled"
-]);
-
-export const LeaveTypeCategoryEnum = pgEnum("leave_type_category", [
-  "annual",
-  "sick",
-  "maternity",
-  "paternity",
-  "compassionate",
-  "unpaid",
-  "study",
 ]);
 
 
@@ -76,6 +58,7 @@ export const modules = pgTable("modules", {
 export const roles = pgTable("roles", {
   id: serial("id").primaryKey(),
   name: varchar("name", { length: 100 }).notNull().unique(),
+  companyId: integer("company_id").references(() => companies.id),
   description: text("description"),
   createdAt: timestamp("created_at").defaultNow(),
 });
@@ -120,7 +103,7 @@ export const employees = pgTable("employees", {
     .default(sql`NULL`),
   reportsTo: integer("reports_to").references((): any => employees.id),
   status: EmployeeStatusEnum("employee_status").default("active"),
-  contractType: ContractTypeEnum("contract_type").notNull().default("full_time"),
+  contractType: varchar("contract_type", { length: 100 }),
   jobTitle: varchar("job_title", { length: 255 }),
   dateHired: date("date_hired"),
   createdAt: timestamp("created_at").defaultNow(),
@@ -132,7 +115,6 @@ export const leaveTypes = pgTable("leave_types", {
   id: serial("id").primaryKey(),
   companyId: integer("company_id").references(() => companies.id).notNull(),
   name: varchar("name", { length: 255 }).notNull().unique(),
-  category: LeaveTypeCategoryEnum("leave_type_category").notNull(),
   maxDaysPerYear: integer("max_days_per_year").notNull(),
   requiresApproval: boolean("requires_approval").default(true),
   createdAt: timestamp("created_at").defaultNow(),
