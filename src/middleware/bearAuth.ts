@@ -110,6 +110,10 @@ export const checkPermission = (
       if (decoded.roles?.includes("super_admin")) {
         return next();
       }
+      //ADMIN BYPASS
+      if (decoded.roles?.includes("admin")) {
+        return next();
+      }
 
       //PERMISSION CHECK FOR NORMAL USERS
       const userPermissions: string[] = decoded.permissions || [];
