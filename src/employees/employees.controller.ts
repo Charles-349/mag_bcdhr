@@ -299,11 +299,12 @@ export const addEmployeeController = async (req: Request, res: Response) => {
   try {
     const employee = req.body;
 
-    // allowBootstrap = true to enable first-user super admin creation
+    // allowBootstrap,,,,true to enable first-user super admin creation
     const result = await addEmployeeService(employee, true);
 
     return res.status(201).json({
       message: result.message,
+      employee: result.employee,
     });
   } catch (error: any) {
     console.error("Error creating employee:", error);

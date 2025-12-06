@@ -1,16 +1,13 @@
 import { eq, ilike, sql } from "drizzle-orm";
 import db from "../Drizzle/db";
-import { modules, TIRole, TSRole } from "../Drizzle/schema";
+import { modules, TIModule, TSModule } from "../Drizzle/schema";
 
-export type TIModule = typeof modules.$inferInsert;
-export type TSModule = typeof modules.$inferSelect;
-
-//CREATE MODULE
+// CREATE MODULE
 export const createModuleService = async (data: TIModule) => {
   if (!data.name) throw new Error("Module name is required");
 
   const exists = await db.query.modules.findFirst({
-    where: eq(modules.name, data.name)
+    where: eq(modules.name, data.name),
   });
 
   if (exists) throw new Error("Module with this name already exists");
@@ -25,23 +22,19 @@ export const createModuleService = async (data: TIModule) => {
   return inserted[0];
 };
 
-
-//GET ALL MODULES
+// GET ALL MODULES (with optional search)
 export const getAllModulesService = async (search?: string) => {
   if (search) {
-    return await db
-      .select()
-      .from(modules)
+    return await db.select().from(modules)
       .where(ilike(modules.name, `%${search}%`));
   }
-
   return await db.select().from(modules);
 };
 
 // GET MODULE BY ID
 export const getModuleByIdService = async (id: number) => {
   const record = await db.query.modules.findFirst({
-    where: eq(modules.id, id)
+    where: eq(modules.id, id),
   });
 
   if (!record) throw new Error("Module not found");
@@ -52,13 +45,20 @@ export const getModuleByIdService = async (id: number) => {
 // UPDATE MODULE
 export const updateModuleService = async (id: number, data: Partial<TIModule>) => {
   const exists = await db.query.modules.findFirst({
-    where: eq(modules.id, id)
+    where: eq(modules.id, id),
   });
 
   if (!exists) throw new Error("Module not found");
 
-  const updated = await db
-    .update(modules)
+  // Check if updating name and the new name already exists
+  if (data.name && data.name !== exists.name) {
+    const duplicate = await db.query.modules.findFirst({
+      where: eq(modules.name, data.name),
+    });
+    if (duplicate) throw new Error("Another module with this name already exists");
+  }
+
+  const updated = await db.update(modules)
     .set({
       name: data.name ?? exists.name,
       description: data.description ?? exists.description,
@@ -69,10 +69,10 @@ export const updateModuleService = async (id: number, data: Partial<TIModule>) =
   return updated[0];
 };
 
-//DELETE MODULE
+// DELETE MODULE
 export const deleteModuleService = async (id: number) => {
   const exists = await db.query.modules.findFirst({
-    where: eq(modules.id, id)
+    where: eq(modules.id, id),
   });
 
   if (!exists) throw new Error("Module not found");

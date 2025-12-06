@@ -664,6 +664,7 @@ import { signToken } from "../utils/jwt";
 type EmployeeCSVRow = {
   firstname: string;
   lastname: string;
+  companyId?: string | number;
   email: string;
   phone?: string;
   gender: "male" | "female";

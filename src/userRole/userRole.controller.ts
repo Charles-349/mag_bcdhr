@@ -10,9 +10,9 @@ import {
 
 export const addUserRoleController = async (req: Request, res: Response) => {
   try {
-    const { employeeId, roleId } = req.body;
+    const { userId, roleId } = req.body;
 
-    const result = await addUserRoleService(employeeId, roleId);
+    const result = await addUserRoleService(userId, roleId);
 
     res.status(201).json({ message: result });
   } catch (err: any) {

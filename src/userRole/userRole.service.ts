@@ -4,6 +4,7 @@ import { userRoles, roles, users } from "../Drizzle/schema";
 
 // CREATE USER ROLE 
 export const addUserRoleService = async (userId: number, roleId: number) => {
+  console.log("Assigning role", roleId, "to user", userId);
   // check user exists
   const user = await db.query.users.findFirst({
     where: eq(users.id, userId)
