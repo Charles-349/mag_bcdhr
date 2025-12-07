@@ -5,6 +5,9 @@ import {
   getLeaveTypeByIdService,
   updateLeaveTypeService,
   deleteLeaveTypeService,
+  getLeaveTypesByCompanyIdWithSearchService,
+  getLeaveTypesByCompanyIdService,
+  getLeaveTypeByNameAndCompanyService,
 } from "./leaveTypes.service";
 
 // CREATE LEAVE TYPE
@@ -54,6 +57,68 @@ export const getLeaveTypeByIdController = async (req: Request, res: Response) =>
     });
   } catch (error: any) {
     console.error("Error fetching leave type by ID:", error);
+    return res.status(500).json({ message: error.message });
+  }
+};
+
+//GET LEAVE TYPE BY NAME FOR A COMPANY
+export const getLeaveTypeByNameAndCompanyController = async (req: Request, res: Response) => {
+  try {
+    const name = req.params.name;
+    const companyId = Number(req.params.companyId);
+    const record = await getLeaveTypeByNameAndCompanyService(name, companyId);
+
+    if (!record) {
+      return res.status(404).json({ message: "Leave type not found" });
+    }
+
+    return res.status(200).json({
+      message: "Leave type retrieved successfully",
+      leaveType: record,
+    });
+  } catch (error: any) {
+    console.error("Error fetching leave type by name and company:", error);
+    return res.status(500).json({ message: error.message });
+  }
+};
+
+//GET LEAVE TYPES BY COMPANY ID
+export const getLeaveTypesByCompanyIdController = async (req: Request, res: Response) => {
+  try {
+    const companyId = Number(req.params.companyId);
+    const records = await getLeaveTypesByCompanyIdService(companyId);
+
+    if (!records || records.length === 0) {
+      return res.status(404).json({ message: "No leave types found for this company" });
+    }
+
+    return res.status(200).json({
+      message: "Leave types retrieved successfully",
+      leaveTypes: records,
+    });
+  } catch (error: any) {
+    console.error("Error fetching leave types by company ID:", error);
+    return res.status(500).json({ message: error.message });
+  }
+};
+
+//GET LEAVE TYPES BY COMPANY ID WITH SEARCH
+export const getLeaveTypesByCompanyIdWithSearchController = async (req: Request, res: Response) => {
+  try {
+    const companyId = Number(req.params.companyId);
+    const search = req.query.search as string;
+    const records = await getLeaveTypesByCompanyIdWithSearchService(companyId, search);
+
+    if (!records || records.length === 0) {
+      return res.status(404).json({ message: "No leave types found for this company with the given search criteria" });
+    }
+
+    return res.status(200).json({
+      message: "Leave types retrieved successfully",
+      leaveTypes: records,
+    });
+  } catch (error: any) {
+    console.error("Error fetching leave types by company ID with search:", error);
     return res.status(500).json({ message: error.message });
   }
 };
