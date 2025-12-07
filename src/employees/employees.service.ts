@@ -682,7 +682,7 @@ const generatePassword = () => crypto.randomBytes(4).toString("hex");
 
 // CREATE EMPLOYEE
 export const addEmployeeService = async (
-  employee: TIUser & { role?: string; employeeData?: Partial<TIEmployee> },
+  employee: TIUser & { role?: string; employeeData?: Partial<TIEmployee>; departmentId?: number | null; jobTitle?: string; reportsTo?: number | null; dateHired?: string | null; contractType?: string },
   allowBootstrap = false
 ) => {
 
@@ -792,13 +792,36 @@ export const addEmployeeService = async (
   }
 
   // EMPLOYEE RECORD
-  const employeeRecord = await db.insert(employees).values({
-    userId: newUserId,
-    ...employee.employeeData,
-    departmentId: employee.employeeData?.departmentId ?? null,
-    jobTitle: employee.employeeData?.jobTitle ?? "Employee",
-    dateHired: employee.employeeData?.dateHired ? new Date(employee.employeeData.dateHired).toISOString() : new Date().toISOString(),
-  }).returning();
+ const employeeRecord = await db.insert(employees).values({
+  userId: newUserId,
+
+  departmentId: employee.departmentId
+    ? Number(employee.departmentId)
+    : employee.employeeData?.departmentId
+      ? Number(employee.employeeData.departmentId)
+      : null,
+
+  jobTitle:
+    employee.jobTitle ??
+    employee.employeeData?.jobTitle ??
+    "Employee",
+
+  reportsTo: employee.reportsTo
+    ? Number(employee.reportsTo)
+    : employee.employeeData?.reportsTo
+      ? Number(employee.employeeData.reportsTo)
+      : null,
+
+  dateHired: employee.dateHired
+    ? new Date(employee.dateHired).toISOString()
+    : employee.employeeData?.dateHired
+      ? new Date(employee.employeeData.dateHired).toISOString()
+      : new Date().toISOString(),
+
+  contractType: employee.contractType ?? "full_time1",
+}).returning();
+
+
 
   // Assign role
   if (roleId) {
@@ -859,7 +882,7 @@ export const loginUserService = async (email: string, password: string) => {
           },
         },
       },
-      employeeProfile: true, // include employee profile if needed
+      employeeProfile: true, 
     },
   });
 
