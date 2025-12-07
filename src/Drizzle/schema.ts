@@ -80,11 +80,11 @@ export const rolePermissions = pgTable("role_permissions", {
 
 export const userRoles = pgTable("user_roles", {
   id: serial("id").primaryKey(),
+  companyId: integer("company_id").references(() => companies.id),
   userId: integer("user_id").references(() => users.id).notNull(),
   roleId: integer("role_id").references(() => roles.id).notNull(),
   createdAt: timestamp("created_at").defaultNow(),
 });
-
 
 export const departments = pgTable("departments", {
   id: serial("id").primaryKey(),
@@ -236,8 +236,13 @@ export const rolePermissionsRelations = relations(rolePermissions, ({ one }) => 
   permission: one(permissions, { fields: [rolePermissions.permissionId], references: [permissions.id] }),
 }));
 
-export const rolesRelations = relations(roles, ({ many }) => ({
+export const rolesRelations = relations(roles, ({ many, one }) => ({
   rolePermissions: many(rolePermissions),
+  company: one(companies, { fields: [roles.companyId], references: [companies.id] }),
+}));
+
+export const companiesRelations = relations(companies, ({ many }) => ({
+  roles: many(roles),
 }));
 
 export const permissionsRelations = relations(permissions, ({ one, many }) => ({

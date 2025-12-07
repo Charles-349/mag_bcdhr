@@ -3,8 +3,10 @@ import db from "../Drizzle/db";
 import { roles, permissions, rolePermissions, TIEmployee } from "../Drizzle/schema";
 
 // CREATE ROLE
-export const addRoleService = async (data: { name: string; description?: string }) => {
-  const existing = await db.query.roles.findFirst({ where: eq(roles.name, data.name) });
+export const addRoleService = async (data: { name: string; description?: string; companyId: number }) => {
+  const existing = await db.query.roles.findFirst({ 
+    where: and(eq(roles.name, data.name), eq(roles.companyId, data.companyId))
+  });
   if (existing) throw new Error("Role already exists");
   await db.insert(roles).values(data);
   return "Role created successfully";
@@ -21,6 +23,22 @@ export const getRolesService = async () => {
 export const getRoleByIdService = async (id: number) => {
   return await db.query.roles.findFirst({
     where: eq(roles.id, id),
+    with: { rolePermissions: { with: { permission: true } } },
+  });
+};
+
+//GET ROLE BY NAME
+export const getRoleByNameService = async (name: string, companyId: number) => {
+  return await db.query.roles.findFirst({
+    where: and(eq(roles.name, name), eq(roles.companyId, companyId)),
+    with: { rolePermissions: { with: { permission: true } } },
+  });
+};
+
+//GET ROLE BY COMPANY ID
+export const getRolesByCompanyIdService = async (companyId: number) => {
+  return await db.query.roles.findMany({
+    where: eq(roles.companyId, companyId),
     with: { rolePermissions: { with: { permission: true } } },
   });
 };

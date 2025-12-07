@@ -7,6 +7,8 @@ import {
   deleteRoleService,
   assignPermissionsService,
   getRolePermissionsService,
+  getRolesByCompanyIdService,
+  getRoleByNameService,
 } from "./roles.service";
 
 // CREATE ROLE
@@ -52,6 +54,47 @@ export const getRoleByIdController = async (req: Request, res: Response) => {
     });
   } catch (error: any) {
     console.error("Error retrieving role:", error);
+    return res.status(500).json({ message: error.message });
+  }
+};
+
+//GET ROLE BY NAME
+export const getRoleByNameController = async (req: Request, res: Response) => {
+  try {
+    const name = req.params.name;
+    const companyId = parseInt(req.params.companyId);
+    const role = await getRoleByNameService(name, companyId);
+
+    if (!role) {
+      return res.status(404).json({ message: "Role not found" });
+    }
+
+    return res.status(200).json({
+      message: "Role retrieved successfully",
+      role,
+    });
+  } catch (error: any) {
+    console.error("Error retrieving role:", error);
+    return res.status(500).json({ message: error.message });
+  }
+};
+
+//GET ROLES BY COMPANY ID
+export const getRolesByCompanyIdController = async (req: Request, res: Response) => {
+  try {
+    const companyId = parseInt(req.params.companyId);
+    const roles = await getRolesByCompanyIdService(companyId);
+
+    if (!roles || roles.length === 0) {
+      return res.status(404).json({ message: "No roles found for this company" });
+    }
+
+    return res.status(200).json({
+      message: "Roles retrieved successfully",
+      roles,
+    });
+  } catch (error: any) {
+    console.error("Error retrieving roles:", error);
     return res.status(500).json({ message: error.message });
   }
 };

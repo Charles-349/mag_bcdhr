@@ -7,6 +7,8 @@ import {
   deleteRoleController,
   assignPermissionsController,
   getRolePermissionsController,
+  getRolesByCompanyIdController,
+  getRoleByNameController,
 } from "./roles.controller";
 
 import { checkPermission } from "../middleware/bearAuth";
@@ -43,6 +45,30 @@ app.route("/roles").post(
     async (req, res, next) => {
       try {
         await getRoleByIdController(req, res);
+      } catch (error) {
+        next(error);
+      }
+    }
+  );
+
+  //GET ROLE BY NAME
+  app.route("/roles/name/:name/company/:companyId").get(
+    checkPermission("view_role"),
+    async (req, res, next) => {
+      try {
+        await getRoleByNameController(req, res);
+      } catch (error) {
+        next(error);
+      }
+    }
+  );
+
+  //GET ROLES BY COMPANY ID
+  app.route("/roles/company/:companyId").get(
+    checkPermission("view_role"),
+    async (req, res, next) => {
+      try {
+        await getRolesByCompanyIdController(req, res);
       } catch (error) {
         next(error);
       }
