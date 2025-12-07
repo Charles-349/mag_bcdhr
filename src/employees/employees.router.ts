@@ -206,6 +206,7 @@ import {
   deleteEmployeeController,
   adminResetEmployeePasswordController,
   loginEmployeeController,
+  getEmployeesByCompanyIdController,
 } from "./employees.controller";
 
 import { checkPermission } from "../middleware/bearAuth";
@@ -248,7 +249,7 @@ const employee = (app: Express) => {
 
   // GET EMPLOYEE BY EMAIL
   app.route("/employees/email/:email").get(
-    checkPermission("view_employee"),
+    checkPermission("view_employee_profile"),
     async (req, res, next) => {
       try {
         await getEmployeeByEmailController(req, res);
@@ -264,6 +265,18 @@ const employee = (app: Express) => {
     async (req, res, next) => {
       try {
         await getEmployeesController(req, res);
+      } catch (error) {
+        next(error);
+      }
+    }
+  );
+
+  //GET EMPLOYEE BY COMPANY ID
+  app.route("/employees/company/:companyId").get(
+    checkPermission("view_employee"),
+    async (req, res, next) => {
+      try {
+        await getEmployeesByCompanyIdController(req, res);
       } catch (error) {
         next(error);
       }

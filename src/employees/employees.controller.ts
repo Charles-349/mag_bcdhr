@@ -292,6 +292,7 @@ import {
   deleteEmployeeService,
   adminResetEmployeePasswordService,
   loginUserService,
+  getEmployeesByCompanyIdService,
 } from "./employees.service";
 
 // CREATE EMPLOYEE
@@ -416,6 +417,33 @@ export const adminResetEmployeePasswordController = async (req: Request, res: Re
     });
   } catch (error: any) {
     console.error("Error resetting employee password:", error);
+    return res.status(500).json({ message: error.message });
+  }
+};
+
+// GET EMPLOYEES BY COMPANY ID
+export const getEmployeesByCompanyIdController = async (req: Request, res: Response) => {
+  try {
+    const companyId = Number(req.params.companyId);
+
+    if (isNaN(companyId)) {
+      return res.status(400).json({ message: "Invalid company ID" });
+    }
+
+    const employees = await getEmployeesByCompanyIdService(companyId);
+
+    if (!employees || employees.length === 0) {
+      return res.status(404).json({
+        message: "No employees found for this company",
+      });
+    }
+
+    return res.status(200).json({
+      message: "Employees retrieved successfully",
+      employees,
+    });
+  } catch (error: any) {
+    console.error("Error fetching employees by company ID:", error);
     return res.status(500).json({ message: error.message });
   }
 };

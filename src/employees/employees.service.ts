@@ -985,5 +985,26 @@ export const deleteEmployeeService = async (employeeId: number) => {
   return deleted.length ? "Employee permanently deleted successfully" : null;
 };
 
+//GET EMPLOYEE BY ID
+export const getEmployeeByIdService = async (employeeId: number) => {
+  return db.query.employees.findFirst({
+    where: eq(employees.id, employeeId),
+    with: { user: true, department: true, manager: true, subordinates: true },
+  });
+};
+
+// GET EMPLOYEES BY COMPANY ID
+export const getEmployeesByCompanyIdService = async (companyId: number) => {
+  return db
+    .select()
+    .from(employees)
+    .innerJoin(users, eq(employees.userId, users.id))
+    .leftJoin(departments, eq(employees.departmentId, departments.id))
+    .where(eq(users.companyId, companyId));
+};
+
+
+
+
 
 
