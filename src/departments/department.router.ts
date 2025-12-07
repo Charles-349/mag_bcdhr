@@ -7,6 +7,7 @@ import {
   updateDepartmentController,
   deleteDepartmentController,
   getDepartmentWithEmployeesController,
+  getDepartmentsByCompanyIdController,
 } from "./department.controller";
 
 import { checkPermission } from "../middleware/bearAuth";
@@ -54,6 +55,18 @@ const department = (app: Express) => {
     async (req, res, next) => {
       try {
         await getDepartmentByNameController(req, res);
+      } catch (error) {
+        next(error);
+      }
+    }
+  );
+
+  //GET DEPARTMENTS BY COMPANY ID
+  app.route("/departments/company/:companyId").get(
+    checkPermission("view_department"),
+    async (req, res, next) => {
+      try {
+        await getDepartmentsByCompanyIdController(req, res);
       } catch (error) {
         next(error);
       }

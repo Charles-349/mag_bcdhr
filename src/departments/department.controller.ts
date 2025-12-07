@@ -7,19 +7,34 @@ import {
   updateDepartmentService,
   deleteDepartmentService,
   getDepartmentWithEmployeesService,
+  getDepartmentsByCompanyIdService,
 } from "./department.service";
 
 // CREATE DEPARTMENT
 export const addDepartmentController = async (req: Request, res: Response) => {
   try {
     const department = req.body;
-    await addDepartmentService(department);
-    return res.status(201).json({ message: "Department created successfully" });
+    const createdDepartment = await addDepartmentService(department);
+
+    return res.status(201).json({
+      message: "Department created successfully",
+      department: createdDepartment,
+    });
   } catch (error: any) {
     console.error("Error creating department:", error);
-    return res.status(500).json({ message: error.message });
+
+    // Validation / duplicate error
+    if (
+      error.message.includes("required") ||
+      error.message.includes("already exists")
+    ) {
+      return res.status(400).json({ message: error.message });
+    }
+
+    return res.status(500).json({ message: "Internal server error" });
   }
 };
+
 
 // GET ALL DEPARTMENTS
 export const getDepartmentsController = async (_req: Request, res: Response) => {
@@ -55,6 +70,21 @@ export const getDepartmentByNameController = async (req: Request, res: Response)
     return res.status(200).json({ message: "Departments retrieved successfully", departments });
   } catch (error: any) {
     console.error("Error retrieving departments by name:", error);
+    return res.status(500).json({ message: error.message });
+  }
+};
+
+//GET DEPARTMENTS BY COMPANY ID
+export const getDepartmentsByCompanyIdController = async (req: Request, res: Response) => {
+  try {
+    const companyId = parseInt(req.params.companyId);
+    const departments = await getDepartmentsByCompanyIdService(companyId);
+    if (!departments || departments.length === 0) {
+      return res.status(404).json({ message: "No departments found for this company" });
+    }
+    return res.status(200).json({ message: "Departments retrieved successfully", departments });
+  } catch (error: any) {
+    console.error("Error retrieving departments by company ID:", error);
     return res.status(500).json({ message: error.message });
   }
 };

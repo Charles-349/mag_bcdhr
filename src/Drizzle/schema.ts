@@ -88,7 +88,7 @@ export const userRoles = pgTable("user_roles", {
 
 export const departments = pgTable("departments", {
   id: serial("id").primaryKey(),
-  companyId: integer("company_id").references(() => companies.id).notNull(),
+  companyId: integer("company_id").references(() => companies.id),
   name: varchar("name", { length: 255 }).notNull().unique(),
   description: text("description"),
   managerId: integer("manager_id"),
