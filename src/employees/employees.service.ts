@@ -763,6 +763,7 @@ export const addEmployeeService = async (
   const newUser = await db.insert(users).values({
     firstname: employee.firstname,
     lastname: employee.lastname,
+    companyId: employee.companyId ? Number(employee.companyId) : null,
     email: employee.email,
     phone: employee.phone,
     password: hashedPassword,
