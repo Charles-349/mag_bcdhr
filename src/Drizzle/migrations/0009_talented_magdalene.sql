@@ -1,0 +1,1 @@
+ALTER TABLE "leave_balances" ADD CONSTRAINT "leave_balances_employee_id_leave_type_id_year_unique" UNIQUE("employee_id","leave_type_id","year");

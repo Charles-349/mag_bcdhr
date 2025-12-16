@@ -651,7 +651,9 @@
 import { eq, sql, ilike } from "drizzle-orm";
 import db from "../Drizzle/db";
 import { 
-  employees, users, departments, roles, rolePermissions, userRoles, TIEmployee, TIUser
+  employees, users, departments, roles, rolePermissions, userRoles, TIEmployee, TIUser,
+  leaveBalances,
+  leaveTypes
 } from "../Drizzle/schema";
 import { parse } from "csv-parse/sync";
 import * as XLSX from "xlsx";
@@ -822,7 +824,30 @@ export const addEmployeeService = async (
   contractType: employee.contractType ?? "full_time1",
 }).returning();
 
+//Create leave balances for new employee
+const currentYear = new Date().getFullYear();
 
+// Fetch company leave types
+const companyLeaveTypes = await db.query.leaveTypes.findMany({
+  where: eq(leaveTypes.companyId, employee.companyId as number),
+});
+
+if (companyLeaveTypes.length === 0) {
+  console.warn("No leave types configured for company");
+}
+
+const balances = companyLeaveTypes.map((lt) => ({
+  employeeId: employeeRecord[0].id,
+  leaveTypeId: lt.id,
+  allocatedDays: lt.maxDaysPerYear,
+  usedDays: 0,
+  remainingDays: lt.maxDaysPerYear,
+  year: currentYear,
+}));
+
+if (balances.length > 0) {
+  await db.insert(leaveBalances).values(balances);
+}
 
   // Assign role
   if (roleId) {
@@ -909,13 +934,19 @@ export const loginUserService = async (email: string, password: string) => {
 
   const roleNames = rolesWithPermissions.map((r) => r.role?.name).filter(Boolean);
 
-  // Generate JWT
-  const token = signToken({
-    id: user.id,
-    email: user.email,
-    roles: roleNames,
-    permissions: permissionsList,
-  });
+    // Take first employee profile (if exists)
+const employee = user.employeeProfile?.[0] ?? null;
+console.log(employee?.id);
+
+const token = signToken({
+  id: user.id,
+  employeeId: employee?.id ?? null,
+  companyId: user.companyId || null,
+  email: user.email,
+  roles: roleNames,
+  permissions: permissionsList,
+});
+
 
   return {
     message: "Login successful",

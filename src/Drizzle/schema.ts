@@ -1,8 +1,9 @@
 import { 
-  pgEnum, pgTable, serial, varchar, text, integer, timestamp, boolean, date 
+  pgEnum, pgTable, serial, varchar, text, integer, timestamp, boolean, date, unique 
 } from "drizzle-orm/pg-core";
 import { relations, sql } from "drizzle-orm";
-import company from "../company/company.router";
+
+
 
 
 export const EmployeeStatusEnum = pgEnum("employee_status", [
@@ -26,6 +27,7 @@ export const companies = pgTable("companies", {
   address: text("address"),
   email: varchar("email", { length: 255 }).notNull().unique(),
   phone: varchar("phone", { length: 50 }),
+  countryCode: varchar("country_code", { length: 5 }).default("KE").notNull(),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -128,27 +130,45 @@ export const passwordResets = pgTable("password_resets", {
   expiresAt: timestamp("expires_at").notNull(),
 });
 
-export const leaveBalances = pgTable("leave_balances", {
-  id: serial("id").primaryKey(),
-  employeeId: integer("employee_id").references(() => employees.id).notNull(),
-  leaveTypeId: integer("leave_type_id").references(() => leaveTypes.id).notNull(),
-  allocatedDays: integer("allocated_days").notNull(),
-  usedDays: integer("used_days").default(0),
-  remainingDays: integer("remaining_days").notNull(),
-  year: integer("year").notNull(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-});
+export const leaveBalances = pgTable(
+  "leave_balances",
+  {
+    id: serial("id").primaryKey(),
+    employeeId: integer("employee_id")
+      .references(() => employees.id)
+      .notNull(),
+    leaveTypeId: integer("leave_type_id")
+      .references(() => leaveTypes.id)
+      .notNull(),
+    allocatedDays: integer("allocated_days").notNull(),
+    usedDays: integer("used_days").default(0),
+    remainingDays: integer("remaining_days").notNull(),
+    year: integer("year").notNull(),
+    updatedAt: timestamp("updated_at").defaultNow(),
+  },
+  (t) => [
+    unique().on(
+      t.employeeId,
+      t.leaveTypeId,
+      t.year
+    ),
+  ]
+);
 
 export const leaveRequests = pgTable("leave_requests", {
   id: serial("id").primaryKey(),
-  employeeId: integer("employee_id").references(() => employees.id).notNull(),
+  employeeId: integer("employee_id")
+  .references(() => employees.id)
+  .notNull(),
   leaveTypeId: integer("leave_type_id").references(() => leaveTypes.id).notNull(),
   startDate: date("start_date").notNull(),
   endDate: date("end_date").notNull(),
-  includeWeekends: boolean("include_weekends").default(false),
-  includeHolidays: boolean("include_holidays").default(false),
-  totalDays: integer("total_days").notNull(),
+  approvingDepartmentId: integer("approving_department_id")
+  .references(() => departments.id)
+  .notNull(),
+  totalDays: integer("total_days"),
   reason: text("reason").notNull(),
+  proofDocument: varchar("proof_document", { length: 255 }),
   status: LeaveStatusEnum("leave_status").default("pending"),
   managerComment: text("manager_comment"),
   hrComment: text("hr_comment"),
@@ -224,6 +244,18 @@ export const employeesRelations = relations(employees, ({ many, one }) => ({
   approvals: many(leaveApprovals),
   notifications: many(hrNotifications),
   auditLogs: many(hrAuditLogs),
+}));
+
+export const leaveRequestsRelations = relations(leaveRequests, ({ many, one }) => ({
+  employee: one(employees, { fields: [leaveRequests.employeeId], references: [employees.id] }),
+  leaveType: one(leaveTypes, { fields: [leaveRequests.leaveTypeId], references: [leaveTypes.id] }),
+  department: one(departments, { fields: [leaveRequests.approvingDepartmentId], references: [departments.id] }),
+  approvals: many(leaveApprovals),
+}));
+
+export const leaveApprovalsRelations = relations(leaveApprovals, ({ one }) => ({
+  leaveRequest: one(leaveRequests, { fields: [leaveApprovals.leaveRequestId], references: [leaveRequests.id] }),
+  approver: one(employees, { fields: [leaveApprovals.approverId], references: [employees.id] }),
 }));
 
 export const userRolesRelations = relations(userRoles, ({ one }) => ({

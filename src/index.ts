@@ -1,3 +1,4 @@
+import "./cron/leaveRollover.cron";
 import express from 'express';
 import employee from './employees/employees.router';
 import roleRoutes from './roles/roles.router';
@@ -9,6 +10,7 @@ import userRole from './userRole/userRole.router';
 import modulesRoute from './modules/module.router';
 import leaveTypes from './leaveTypes/leaveTypes.router';
 import company from './company/company.router';
+import leaveRequest from './leaveRequest/leaveRequest.router';
 
 const initializeApp = ()=>{
 const app = express();
@@ -32,6 +34,7 @@ userRole(app);
 modulesRoute(app);
 leaveTypes(app);
 company(app);
+leaveRequest(app);
 
 app.get('/', (req, res) => {
     res.send('Welcome to the Magnate API');
