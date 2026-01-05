@@ -1021,6 +1021,7 @@ export const getEmployeeByEmailService = async (email: string) => {
   });
 };
 
+
 // FETCH ALL EMPLOYEES
 export const getEmployeesService = async () => {
   return db.query.employees.findMany({

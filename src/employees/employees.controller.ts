@@ -293,6 +293,7 @@ import {
   adminResetEmployeePasswordService,
   loginUserService,
   getEmployeesByCompanyIdService,
+  getEmployeeByIdService,
 } from "./employees.service";
 
 // CREATE EMPLOYEE
@@ -350,6 +351,26 @@ export const getEmployeeByEmailController = async (req: Request, res: Response) 
     });
   } catch (error: any) {
     console.error("Error fetching employee by email:", error);
+    return res.status(500).json({ message: error.message });
+  }
+};
+
+// GET EMPLOYEE BY ID
+export const getEmployeeByIdController = async (req: Request, res: Response) => {
+  try {
+    const id = parseInt(req.params.id);
+    const employee = await getEmployeeByIdService(id);
+
+    if (!employee) {
+      return res.status(404).json({ message: "Employee not found" });
+    }
+
+    return res.status(200).json({
+      message: "Employee retrieved successfully",
+      employee,
+    });
+  } catch (error: any) {
+    console.error("Error fetching employee:", error);
     return res.status(500).json({ message: error.message });
   }
 };
