@@ -273,8 +273,7 @@ const employee = (app: Express) => {
   );
 
     // GET Employee by ID
-  app.route("/employees/:id").get(
-    checkPermission("view_employee"), 
+  app.route("/employees/:id").get( 
     async (req, res, next) => {
       try {
         await getEmployeeByIdController(req, res);
