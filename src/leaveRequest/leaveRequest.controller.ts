@@ -25,6 +25,34 @@ export const addLeaveRequestController = async (req: Request, res: Response) => 
   }
 };
 
+// export const addLeaveRequestController = async (
+//   req: Request & { user?: any },
+//   res: Response
+// ) => {
+//   try {
+//     const applyingEmployeeId = req.user?.employeeId;
+
+//     if (!applyingEmployeeId) {
+//       return res.status(401).json({ message: "Unauthorized" });
+//     }
+
+//     const leaveRequest = await addLeaveRequestService(
+//       req.body,
+//       applyingEmployeeId
+//     );
+
+//     return res.status(201).json({
+//       message: "Leave request created successfully",
+//       leaveRequest,
+//     });
+//   } catch (error: unknown) {
+//     if (error instanceof Error) {
+//       return res.status(400).json({ message: error.message });
+//     }
+//   }
+// };
+
+
 // GET ALL LEAVE REQUESTS
 export const getLeaveRequestsController = async (_req: Request, res: Response) => {
   try {

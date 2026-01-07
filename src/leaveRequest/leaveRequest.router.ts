@@ -16,6 +16,7 @@ const leaveRequest = (app: Express) => {
   // CREATE LEAVE REQUEST
   app.route("/leave-requests").post(
     // checkPermission("create_leave_request", { allowBootstrap: true }),
+    checkPermission("create_leave_request"),
     async (req, res, next) => {
       try {
         await addLeaveRequestController(req, res);
