@@ -1042,11 +1042,35 @@ export const deleteEmployeeService = async (employeeId: number) => {
 };
 
 //GET EMPLOYEE BY ID
-export const getEmployeeByIdService = async (employeeId: number) => {
-  return db.query.employees.findFirst({
+export const getEmployeeByIdWithLeaveAnalysisService = async (
+  employeeId: number,
+  year: number
+) => {
+  const employee = await db.query.employees.findFirst({
     where: eq(employees.id, employeeId),
-    with: { user: true, department: true, manager: true, subordinates: true },
+    with: {
+      user: true,
+      department: true,
+      manager: true,
+
+      //Leave balances + leave types
+      leaveBalances: {
+        where: eq(leaveBalances.year, year),
+        with: {
+          leaveType: true,
+        },
+      },
+
+      //Leave requests (applied leaves)
+      leaveRequests: {
+        with: {
+          leaveType: true,
+        },
+      },
+    },
   });
+
+  return employee;
 };
 
 // GET EMPLOYEES BY COMPANY ID

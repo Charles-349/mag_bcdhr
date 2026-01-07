@@ -293,7 +293,7 @@ import {
   adminResetEmployeePasswordService,
   loginUserService,
   getEmployeesByCompanyIdService,
-  getEmployeeByIdService,
+  getEmployeeByIdWithLeaveAnalysisService,
 } from "./employees.service";
 
 // CREATE EMPLOYEE
@@ -358,22 +358,53 @@ export const getEmployeeByEmailController = async (req: Request, res: Response) 
 // GET EMPLOYEE BY ID
 export const getEmployeeByIdController = async (req: Request, res: Response) => {
   try {
-    const id = parseInt(req.params.id);
-    const employee = await getEmployeeByIdService(id);
+    const employeeId = Number(req.params.id);
+    const year = Number(req.query.year) || new Date().getFullYear();
+
+    const employee =
+      await getEmployeeByIdWithLeaveAnalysisService(employeeId, year);
 
     if (!employee) {
       return res.status(404).json({ message: "Employee not found" });
     }
 
+    //reshape response for analytics
+    const leaveSummary = (employee.leaveBalances || []).map((lb: any) => ({
+      leaveTypeId: lb.leaveType?.id,
+      leaveTypeName: lb.leaveType?.name,
+      allocatedDays: lb.allocatedDays,
+      usedDays: lb.usedDays,
+      remainingDays: lb.remainingDays,
+      year: lb.year,
+    }));
+
+    const leaveApplications = employee.leaveRequests.map((lr) => ({
+      id: lr.id,
+      leaveType: lr.leaveType.name,
+      startDate: lr.startDate,
+      endDate: lr.endDate,
+      totalDays: lr.totalDays,
+      status: lr.status,
+    }));
+
     return res.status(200).json({
-      message: "Employee retrieved successfully",
-      employee,
+      employee: {
+        id: employee.id,
+        name: `${employee.user.firstname} ${employee.user.lastname}`,
+        department: employee.department?.name,
+        jobTitle: employee.jobTitle,
+        status: employee.status,
+      },
+      leaveSummary,
+      leaveApplications,
     });
-  } catch (error: any) {
-    console.error("Error fetching employee:", error);
-    return res.status(500).json({ message: error.message });
+  } catch (error: unknown) {
+    if (error instanceof Error) {
+      return res.status(500).json({ message: error.message });
+    }
   }
 };
+
 
 // GET ALL EMPLOYEES
 export const getEmployeesController = async (_req: Request, res: Response) => {
