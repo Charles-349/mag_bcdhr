@@ -246,6 +246,18 @@ export const employeesRelations = relations(employees, ({ many, one }) => ({
   auditLogs: many(hrAuditLogs),
 }));
 
+export const leaveBalancesRelations = relations(leaveBalances, ({ one }) => ({
+  employee: one(employees, {
+    fields: [leaveBalances.employeeId],
+    references: [employees.id],
+  }),
+  leaveType: one(leaveTypes, {
+    fields: [leaveBalances.leaveTypeId],
+    references: [leaveTypes.id],
+  }),
+}));
+
+
 export const leaveRequestsRelations = relations(leaveRequests, ({ many, one }) => ({
   employee: one(employees, { fields: [leaveRequests.employeeId], references: [employees.id] }),
   leaveType: one(leaveTypes, { fields: [leaveRequests.leaveTypeId], references: [leaveTypes.id] }),
