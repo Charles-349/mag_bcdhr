@@ -208,6 +208,7 @@ import {
   loginEmployeeController,
   getEmployeesByCompanyIdController,
   getEmployeeByIdController,
+  uploadEmployeesController,
 } from "./employees.controller";
 
 import { checkPermission } from "../middleware/bearAuth";
@@ -221,6 +222,19 @@ const employee = (app: Express) => {
     async (req, res, next) => {
       try {
         await addEmployeeController(req, res);
+      } catch (error) {
+        next(error);
+      }
+    }
+  );
+
+//UPLOAD EMPLOYEES (CSV/XLSX)
+  app.route("/employees/upload").post(
+    checkPermission("upload_employee"),
+    upload.single("file"),
+    async (req, res, next) => {
+      try {
+        await uploadEmployeesController(req, res);
       } catch (error) {
         next(error);
       }

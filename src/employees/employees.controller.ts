@@ -294,6 +294,7 @@ import {
   loginUserService,
   getEmployeesByCompanyIdService,
   getEmployeeByIdWithLeaveAnalysisService,
+  uploadEmployeesService,
 } from "./employees.service";
 
 // CREATE EMPLOYEE
@@ -311,6 +312,49 @@ export const addEmployeeController = async (req: Request, res: Response) => {
   } catch (error: any) {
     console.error("Error creating employee:", error);
     return res.status(500).json({ message: error.message });
+  }
+};
+
+// UPLOAD EMPLOYEES (CSV / XLSX)
+export const uploadEmployeesController = async (req: Request, res: Response) => {
+  try {
+    // Multer file check
+    if (!req.file) {
+      return res.status(400).json({
+        message: "No file uploaded. Please upload a CSV or XLSX file.",
+      });
+    }
+
+    // Company ID can come from:
+    const companyId =
+      Number((req as any).user?.companyId) || Number(req.body.companyId);
+
+    if (!companyId || isNaN(companyId)) {
+      return res.status(400).json({
+        message: "Company ID is required to upload employees",
+      });
+    }
+
+    // Call service
+    const result = await uploadEmployeesService(
+      req.file.buffer,
+      req.file.mimetype,
+      companyId
+    );
+
+    return res.status(200).json({
+      message: result.message,
+      total: result.total,
+      success: result.success,
+      failed: result.failed,
+      errors: result.errors,
+    });
+  } catch (error: any) {
+    console.error("Error uploading employees:", error);
+
+    return res.status(500).json({
+      message: error.message || "Failed to upload employees",
+    });
   }
 };
 

@@ -889,6 +889,122 @@ if (balances.length > 0) {
   };
 };
 
+// UPLOAD EMPLOYEES (CSV + XLSX)
+export const uploadEmployeesService = async (
+  buffer: Buffer,
+  mimetype: string,
+  companyId: number
+) => {
+  let records: EmployeeCSVRow[];
+
+  //Parse file
+  if (mimetype === "text/csv") {
+    records = parse(buffer.toString(), {
+      columns: true,
+      skip_empty_lines: true,
+      trim: true,
+    });
+  } else if (
+    mimetype ===
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" ||
+    mimetype === "application/vnd.ms-excel"
+  ) {
+    const workbook = XLSX.read(buffer, { type: "buffer" });
+    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+    records = XLSX.utils.sheet_to_json(sheet);
+  } else {
+    throw new Error("Unsupported file format. Upload CSV or XLSX.");
+  }
+
+  //Check if bootstrap is allowed 
+  const [{ count }] = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(employees);
+
+  let allowBootstrap = Number(count) === 0;
+
+  let success = 0;
+  let failed = 0;
+  const errors: {
+    row: number;
+    email?: string;
+    reason: string;
+  }[] = [];
+
+  //Process rows
+  for (let i = 0; i < records.length; i++) {
+    const r = records[i];
+
+    try {
+      await db.transaction(async () => {
+        // Resolve department
+        let departmentId: number | null = null;
+
+        if (r.departmentId) {
+          departmentId = Number(r.departmentId);
+        } else if (r.departmentName) {
+          let dept = await db.query.departments.findFirst({
+            where: eq(departments.name, r.departmentName),
+          });
+
+          if (!dept) {
+            [dept] = await db
+              .insert(departments)
+              .values({
+                name: r.departmentName,
+                description: "Auto-created from upload",
+              })
+              .returning();
+          }
+
+          departmentId = dept.id;
+        }
+
+        // Call SOURCE OF TRUTH
+        await addEmployeeService(
+          {
+            firstname: r.firstname,
+            lastname: r.lastname,
+            email: r.email,
+            phone: r.phone,
+            gender: r.gender,
+            companyId,
+            role: r.role,
+            departmentId,
+            reportsTo: r.reportsTo ? Number(r.reportsTo) : null,
+            jobTitle: r.jobTitle,
+            employeeData: {
+              dateHired: r.dateHired,
+            },
+            imageUrl: r.imageUrl,
+          },
+          allowBootstrap
+        );
+
+        // Bootstrap only once
+        allowBootstrap = false;
+        success++;
+      });
+    } catch (err: any) {
+      failed++;
+      errors.push({
+        row: i + 1,
+        email: r.email,
+        reason: err.message || "Unknown error",
+      });
+    }
+  }
+
+  return {
+    message: "Employee upload completed",
+    total: records.length,
+    success,
+    failed,
+    errors,
+  };
+};
+
+
 // LOGIN EMPLOYEE
 export const loginUserService = async (email: string, password: string) => {
   // Fetch user with roles, role permissions, and employee profile
