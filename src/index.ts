@@ -12,6 +12,7 @@ import modulesRoute from './modules/module.router';
 import leaveTypes from './leaveTypes/leaveTypes.router';
 import company from './company/company.router';
 import leaveRequest from './leaveRequest/leaveRequest.router';
+import leaveBalance from './leaveBalance/leaveBalance.router';
 
 const initializeApp = ()=>{
 const app = express();
@@ -36,6 +37,7 @@ modulesRoute(app);
 leaveTypes(app);
 company(app);
 leaveRequest(app);
+leaveBalance(app);
 
 app.get('/', (req, res) => {
     res.send('Welcome to the Magnate API');

@@ -30,7 +30,7 @@ export const runLeaveYearRollover = async () => {
   }
 
   for (const balance of balances) {
-    const MAX_ROLLOVER_DAYS = 5; // 🔧 configurable constant
+    const MAX_ROLLOVER_DAYS = 10; 
 
     const rolloverDays = Math.min(
       balance.remainingDays,
