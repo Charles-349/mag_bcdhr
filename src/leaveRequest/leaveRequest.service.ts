@@ -1,4 +1,4 @@
-import { and, eq, sql, desc, lte, or, gte, not } from "drizzle-orm";
+import { and, eq, sql, desc, lte, or, gte, not, inArray } from "drizzle-orm";
 import db from "../Drizzle/db";
 import {
   leaveRequests,
@@ -9,6 +9,7 @@ import {
   leaveBalances,
   hrNotifications,
   departments,
+  users,
 } from "../Drizzle/schema";
 
 // Helper function to send notification
@@ -65,7 +66,9 @@ export const addLeaveRequestService = async (
   }
 
   const currentYear = new Date().getFullYear();
-  const balance = await db.query.leaveBalances.findFirst({
+
+  // --- Check leave balance ---
+  let balance = await db.query.leaveBalances.findFirst({
     where: and(
       eq(leaveBalances.employeeId, employee.id),
       eq(leaveBalances.leaveTypeId, leaveType.id),
@@ -73,8 +76,18 @@ export const addLeaveRequestService = async (
     ),
   });
 
+  // --- Initialize balance if missing ---
   if (!balance) {
-    throw new Error("Leave balance not initialized for this year");
+    console.log(`Initializing leave balance for employee ${employee.id} for year ${currentYear}`);
+    const [newBalance] = await db.insert(leaveBalances).values({
+      employeeId: employee.id,
+      leaveTypeId: leaveType.id,
+      allocatedDays: leaveType.maxDaysPerYear,
+      usedDays: 0,
+      remainingDays: leaveType.maxDaysPerYear,
+      year: currentYear,
+    }).returning();
+    balance = newBalance;
   }
 
   //Prevent overlapping leave requests
@@ -82,26 +95,25 @@ export const addLeaveRequestService = async (
   const endDate = new Date(leaveRequest.endDate!).toISOString().split('T')[0];
 
   const overlappingLeaves = await db.query.leaveRequests.findMany({
-  where: and(
-    eq(leaveRequests.employeeId, employee.id),
-    or(
-      and(
-        lte(leaveRequests.startDate, startDate),
-        gte(leaveRequests.endDate, startDate)
+    where: and(
+      eq(leaveRequests.employeeId, employee.id),
+      or(
+        and(
+          lte(leaveRequests.startDate, startDate),
+          gte(leaveRequests.endDate, startDate)
+        ),
+        and(
+          lte(leaveRequests.startDate, endDate),
+          gte(leaveRequests.endDate, endDate)
+        ),
+        and(
+          gte(leaveRequests.startDate, startDate),
+          lte(leaveRequests.endDate, endDate)
+        )
       ),
-      and(
-        lte(leaveRequests.startDate, endDate),
-        gte(leaveRequests.endDate, endDate)
-      ),
-      and(
-        gte(leaveRequests.startDate, startDate),
-        lte(leaveRequests.endDate, endDate)
-      )
+      not(eq(leaveRequests.status, "rejected")) // ignore rejected leaves
     ),
-    not(eq(leaveRequests.status, "rejected")) // ignore rejected leaves
-  ),
-});
-
+  });
 
   if (overlappingLeaves.length > 0) {
     throw new Error(
@@ -143,7 +155,6 @@ export const addLeaveRequestService = async (
 
   return created;
 };
-
 
 export const getLeaveRequestsService = async () => {
   return await db.query.leaveRequests.findMany({
@@ -440,4 +451,52 @@ export const decideLeaveRequestService = async (
   throw new Error("Invalid action");
 };
 
+// GET LEAVE REQUESTS FOR MANAGER 
+export const getLeaveRequestsForApprovingDepartmentManagerService = async (
+  managerEmployeeId: number,
+  companyId: number
+) => {
+  return await db
+    .select({
+      request: leaveRequests,
+      department: departments,
+      employee: employees,
+      user: users,
+      leaveType: leaveTypes,
+    })
+    .from(leaveRequests)
 
+    // Join department
+    .innerJoin(
+      departments,
+      eq(leaveRequests.approvingDepartmentId, departments.id)
+    )
+
+    // Join employee
+    .innerJoin(
+      employees,
+      eq(leaveRequests.employeeId, employees.id)
+    )
+
+    // Join user
+    .innerJoin(
+      users,
+      eq(employees.userId, users.id)
+    )
+
+    // Join leave type
+    .innerJoin(
+      leaveTypes,
+      eq(leaveRequests.leaveTypeId, leaveTypes.id)
+    )
+
+    .where(
+      and(
+        eq(leaveRequests.status, "pending"),
+        eq(departments.managerId, managerEmployeeId),
+        eq(departments.companyId, companyId)
+      )
+    )
+
+    .orderBy(desc(leaveRequests.createdAt));
+};

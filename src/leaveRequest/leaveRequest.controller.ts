@@ -8,6 +8,7 @@ import {
   updateLeaveRequestService,
   deleteLeaveRequestService,
   decideLeaveRequestService,
+  getLeaveRequestsForApprovingDepartmentManagerService,
 } from "./leaveRequest.service";
 
 // CREATE LEAVE REQUEST
@@ -157,5 +158,31 @@ export const decideLeaveRequestController = async (req: Request, res: Response) 
     return res.status(200).json(result);
   } catch (error: any) {
     return res.status(400).json({ message: error.message });
+  }
+};
+
+// GET LEAVE REQUESTS FOR MANAGER
+export const getDepartmentApprovalRequestsController = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const managerEmployeeId = Number(req.user?.employeeId);
+    const companyId = Number(req.user?.companyId);
+
+    if (!managerEmployeeId || !companyId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    const requests =
+      await getLeaveRequestsForApprovingDepartmentManagerService(
+        managerEmployeeId,
+        companyId
+      );
+
+    return res.status(200).json({ requests });
+  } catch (error: any) {
+    console.error(error);
+    return res.status(500).json({ message: error.message });
   }
 };

@@ -8,6 +8,7 @@ import {
   updateLeaveRequestController,
   deleteLeaveRequestController,
   decideLeaveRequestController,
+  getDepartmentApprovalRequestsController,
 } from "./leaveRequest.controller";
 
 import { checkPermission } from "../middleware/bearAuth";
@@ -109,6 +110,19 @@ const leaveRequest = (app: Express) => {
       }
     }
   );
+
+  // MANAGER: VIEW TEAM LEAVE REQUESTS
+app.route("/leave-requests/manager").get(
+  checkPermission("view_team_leave_requests"),
+  async (req, res, next) => {
+    try {
+      await getDepartmentApprovalRequestsController(req, res);
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
 
 };
 
