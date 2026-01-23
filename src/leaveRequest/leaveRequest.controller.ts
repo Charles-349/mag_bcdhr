@@ -8,7 +8,7 @@ import {
   updateLeaveRequestService,
   deleteLeaveRequestService,
   decideLeaveRequestService,
-  getLeaveRequestsForApprovingDepartmentManagerService,
+  getLeaveRequestsForManagerCommentService,
 } from "./leaveRequest.service";
 
 // CREATE LEAVE REQUEST
@@ -161,11 +161,8 @@ export const decideLeaveRequestController = async (req: Request, res: Response) 
   }
 };
 
-// GET LEAVE REQUESTS FOR MANAGER
-export const getDepartmentApprovalRequestsController = async (
-  req: Request,
-  res: Response
-) => {
+// GET LEAVE REQUESTS FOR MANAGER COMMENTS
+export const getLeaveRequestsForManagerCommentController = async (req: Request, res: Response) => {
   try {
     const managerEmployeeId = Number(req.user?.employeeId);
     const companyId = Number(req.user?.companyId);
@@ -174,12 +171,7 @@ export const getDepartmentApprovalRequestsController = async (
       return res.status(401).json({ message: "Unauthorized" });
     }
 
-    const requests =
-      await getLeaveRequestsForApprovingDepartmentManagerService(
-        managerEmployeeId,
-        companyId
-      );
-
+    const requests = await getLeaveRequestsForManagerCommentService(managerEmployeeId, companyId);
     return res.status(200).json({ requests });
   } catch (error: any) {
     console.error(error);

@@ -452,51 +452,31 @@ export const decideLeaveRequestService = async (
 };
 
 // GET LEAVE REQUESTS FOR MANAGER 
-export const getLeaveRequestsForApprovingDepartmentManagerService = async (
+export const getLeaveRequestsForManagerCommentService = async (
   managerEmployeeId: number,
   companyId: number
 ) => {
-  return await db
-    .select({
-      request: leaveRequests,
-      department: departments,
-      employee: employees,
-      user: users,
-      leaveType: leaveTypes,
-    })
-    .from(leaveRequests)
+  if (!managerEmployeeId || !companyId) throw new Error("Invalid managerEmployeeId or companyId");
 
-    // Join department
-    .innerJoin(
-      departments,
-      eq(leaveRequests.approvingDepartmentId, departments.id)
-    )
-
-    // Join employee
-    .innerJoin(
-      employees,
-      eq(leaveRequests.employeeId, employees.id)
-    )
-
-    // Join user
-    .innerJoin(
-      users,
-      eq(employees.userId, users.id)
-    )
-
-    // Join leave type
-    .innerJoin(
-      leaveTypes,
-      eq(leaveRequests.leaveTypeId, leaveTypes.id)
-    )
-
-    .where(
-      and(
-        eq(leaveRequests.status, "pending"),
-        eq(departments.managerId, managerEmployeeId),
-        eq(departments.companyId, companyId)
-      )
-    )
-
-    .orderBy(desc(leaveRequests.createdAt));
+  // Fetch leave requests where the approving department's manager is the current manager
+  return await db.query.leaveRequests.findMany({
+    where: and(
+      eq(leaveRequests.status, "pending"),
+      sql`${leaveRequests.approvingDepartmentId} IN (
+        SELECT id 
+        FROM departments 
+        WHERE manager_id = ${managerEmployeeId} AND company_id = ${companyId}
+      )`
+    ),
+    with: {
+      employee: {
+        with: {
+          user: true,
+          department: true,
+        },
+      },
+      leaveType: true,
+    },
+  });
 };
+
