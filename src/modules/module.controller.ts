@@ -4,7 +4,10 @@ import {
   getAllModulesService,
   getModuleByIdService,
   updateModuleService,
-  deleteModuleService
+  deleteModuleService,
+  getModulesWithPermissionsService,
+  getModuleWithPermissionsByIdService,
+  getAllModulesWithPermissionsService
 } from "./module.service";
 
 // CREATE MODULE
@@ -101,6 +104,53 @@ export const deleteModuleController = async (req: Request, res: Response) => {
     });
   } catch (error: any) {
     console.error("Error deleting module:", error);
+    return res.status(500).json({ message: error.message });
+  }
+};
+
+
+// GET MODULES WITH PERMISSIONS
+export const getModulesWithPermissionsController = async (req: Request, res: Response) => {
+  try {
+    const modulesWithPermissions = await getModulesWithPermissionsService();
+
+    return res.status(200).json({
+      message: "Modules with permissions retrieved successfully",
+      modules: modulesWithPermissions,
+    });
+  } catch (error: any) {
+    console.error("Error fetching modules with permissions:", error);
+    return res.status(500).json({ message: error.message });
+  }
+};
+
+//GET A MODULE AND ITS PERMISSIONS BY MODULE ID
+export const getModuleWithPermissionsByIdController = async (req: Request, res: Response) => {
+  try {
+    const id = parseInt(req.params.id);
+    const moduleWithPermissions = await getModuleWithPermissionsByIdService(id);
+
+    return res.status(200).json({
+      message: "Module with permissions retrieved successfully",
+      module: moduleWithPermissions,
+    });
+  } catch (error: any) {
+    console.error("Error fetching module with permissions:", error);
+    return res.status(500).json({ message: error.message });
+  }
+};
+
+// GET ALL MODULES WITH PERMISSIONS
+export const getAllModulesWithPermissionsController = async (_req: Request, res: Response) => {
+  try {
+    const modules = await getAllModulesWithPermissionsService();
+
+    return res.status(200).json({
+      message: "Modules retrieved successfully",
+      modules,
+    });
+  } catch (error: any) {
+    console.error("Error fetching modules:", error);
     return res.status(500).json({ message: error.message });
   }
 };

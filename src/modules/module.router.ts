@@ -5,6 +5,9 @@ import {
   getModuleByIdController,
   updateModuleController,
   deleteModuleController,
+  getModulesWithPermissionsController,
+  getModuleWithPermissionsByIdController,
+  getAllModulesWithPermissionsController,
 } from "./module.controller";
 
 import { checkPermission } from "../middleware/bearAuth";
@@ -65,6 +68,42 @@ const modulesRoute = (app: Express) => {
     async (req, res, next) => {
       try {
         await deleteModuleController(req, res);
+      } catch (error) {
+        next(error);
+      }
+    }
+  );
+
+  //GET MODULES WITH PERMISSIONS
+  app.route("/modules/with-permissions").get(
+    checkPermission("view_module"),
+    async (req, res, next) => {
+      try {
+        await getModulesWithPermissionsController(req, res);
+      } catch (error) {
+        next(error);
+      }
+    }
+  );
+
+   app.route("/modules").get(
+    checkPermission("view_module"),
+    async (req, res, next) => {
+      try {
+        await getAllModulesWithPermissionsController(req, res);
+      } catch (error) {
+        next(error);
+      }
+    }
+  );
+
+
+  //GET A MODULE AND ITS PERMISSIONS BY MODULE ID
+  app.route("/modules/:id/with-permissions").get(
+    checkPermission("view_module"),
+    async (req, res, next) => {
+      try {
+        await getModuleWithPermissionsByIdController(req, res);
       } catch (error) {
         next(error);
       }

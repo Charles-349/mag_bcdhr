@@ -81,3 +81,63 @@ export const deleteModuleService = async (id: number) => {
 
   return "Module deleted successfully";
 };
+
+//GET MODULES WITH PERMISSIONS
+export const getModulesWithPermissionsService = async () => {
+  const records = await db.query.modules.findMany({
+    with: {
+      permissions: true,
+    },
+  });
+
+  return records.map((record) => ({
+    id: record.id,
+    name: record.name,
+    description: record.description,
+    permissions: record.permissions || [],
+  }));
+};
+
+//GET A MODULE AND ITS PERMISSIONS BY MODULE ID
+export const getModuleWithPermissionsByIdService = async (id: number) => {
+  const record = await db.query.modules.findFirst({
+    where: eq(modules.id, id),
+    with: {
+      permissions: true,
+    },
+  });
+
+  if (!record) throw new Error("Module not found");
+
+  return {
+    id: record.id,
+    name: record.name,
+    description: record.description,
+    permissions: record.permissions || [],
+  };
+};
+
+// FETCH ALL MODULES WITH PERMISSIONS
+export const getAllModulesWithPermissionsService = async () => {
+  // Fetch modules along with permissions
+  const modulesWithPermissions = await db.query.modules.findMany({
+    with: {
+      permissions: true,
+    },
+  });
+
+  // Format response exactly
+  return modulesWithPermissions.map((m) => ({
+    id: m.id,
+    name: m.name,
+    description: m.description,
+    createdAt: m.createdAt,
+    permissions: (m.permissions || []).map((p) => ({
+      id: p.id,
+      name: p.name,
+      description: p.description,
+      createdAt: p.createdAt,
+    })),
+  }));
+};
+

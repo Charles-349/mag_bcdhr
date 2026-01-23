@@ -269,7 +269,9 @@ export const leaveApprovalsRelations = relations(leaveApprovals, ({ one }) => ({
   leaveRequest: one(leaveRequests, { fields: [leaveApprovals.leaveRequestId], references: [leaveRequests.id] }),
   approver: one(employees, { fields: [leaveApprovals.approverId], references: [employees.id] }),
 }));
-
+export const modulesRelations = relations(modules, ({ many }) => ({
+  permissions: many(permissions),
+}));
 export const userRolesRelations = relations(userRoles, ({ one }) => ({
   user: one(users, { fields: [userRoles.userId], references: [users.id] }),
   role: one(roles, { fields: [userRoles.roleId], references: [roles.id] }),
