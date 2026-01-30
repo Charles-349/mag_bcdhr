@@ -1,29 +1,33 @@
-// import db from "../Drizzle/db";
-// import { userRoles, rolePermissions, permissions, roles } from "../Drizzle/schema";
-// import { eq, and } from "drizzle-orm";
+import { Request, Response, NextFunction } from "express";
 
-// //Checks if an employee has a specific permission within a company
+interface UserWithPermissions {
+  id: number;
+  employeeId: number;
+  companyId: number;
+  email?: string;
+  permissions?: string[];
+}
 
-// export const hasPermission = async (
-//   employeeId: number,
-//   permissionName: string,
-//   companyId: number
-// ): Promise<boolean> => {
-//   // Get user roles
-//   const permissionRecord = await db
-//     .select({ name: permissions.name })
-//     .from(userRoles)
-//     .innerJoin(roles, eq(userRoles.roleId, roles.id))
-//     .innerJoin(rolePermissions, eq(roles.id, rolePermissions.roleId))
-//     .innerJoin(permissions, eq(rolePermissions.permissionId, permissions.id))
-//     .where(
-//       and(
-//         eq(userRoles.userId, employeeId),
-//         eq(userRoles.companyId, companyId),
-//         eq(permissions.name, permissionName)
-//       )
-//     )
-//     .limit(1);
+interface RequestWithUser extends Request {
+  user?: UserWithPermissions;
+}
 
-//   return permissionRecord.length > 0;
-// };
+export const checkApproveOrComment = (
+  req: RequestWithUser,
+  res: Response,
+  next: NextFunction
+) => {
+      console.log("REQ.USER:", req.user);
+  console.log("PERMISSIONS:", req.user?.permissions);
+
+  const userPermissions: string[] = req.user?.permissions || [];
+
+  if (
+    userPermissions.includes("approve_leave_request") ||
+    userPermissions.includes("comment_leave_request")
+  ) {
+    return next();
+  }
+
+  return res.status(403).json({ message: "You do not have permission" });
+};

@@ -132,34 +132,34 @@ export const deleteLeaveRequestController = async (req: Request, res: Response) 
 };
 
 // APPROVE LEAVE REQUEST
-export const decideLeaveRequestController = async (req: Request, res: Response) => {
-  try {
-    const leaveRequestId = Number(req.params.id);
-    const approverEmployeeId = Number(req.user?.employeeId || req.body.employeeId);
+// export const decideLeaveRequestController = async (req: Request, res: Response) => {
+//   try {
+//     const leaveRequestId = Number(req.params.id);
+//     const approverEmployeeId = Number(req.user?.employeeId || req.body.employeeId);
 
-    if (!approverEmployeeId) {
-      return res.status(401).json({ message: "Unauthorized" });
-    }
+//     if (!approverEmployeeId) {
+//       return res.status(401).json({ message: "Unauthorized" });
+//     }
 
-    const { action, comment, totalDays } = req.body;
+//     const { action, comment, totalDays } = req.body;
 
-    if (!["approve", "reject", "comment"].includes(action)) {
-      return res.status(400).json({ message: "Invalid action" });
-    }
+//     if (!["approve", "reject", "comment"].includes(action)) {
+//       return res.status(400).json({ message: "Invalid action" });
+//     }
 
-    const result = await decideLeaveRequestService(
-      leaveRequestId,
-      approverEmployeeId,
-      action as "approve" | "reject" | "comment",
-      comment,
-      totalDays
-    );
+//     const result = await decideLeaveRequestService(
+//       leaveRequestId,
+//       approverEmployeeId,
+//       action as "approve" | "reject" | "comment",
+//       comment,
+//       totalDays
+//     );
 
-    return res.status(200).json(result);
-  } catch (error: any) {
-    return res.status(400).json({ message: error.message });
-  }
-};
+//     return res.status(200).json(result);
+//   } catch (error: any) {
+//     return res.status(400).json({ message: error.message });
+//   }
+// };
 
 // GET LEAVE REQUESTS FOR MANAGER COMMENTS
 export const getLeaveRequestsForManagerCommentController = async (req: Request, res: Response) => {
@@ -188,63 +188,63 @@ export const getLeaveRequestsForManagerCommentController = async (req: Request, 
 };
 
 
-// export const decideLeaveRequestController = async (
-//   req: Request,
-//   res: Response
-// ) => {
-//   try {
-//     //Get authenticated employee ID (from middleware)
-//     const approverEmployeeId = req.user?.employeeId;
+export const decideLeaveRequestController = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    //Get authenticated employee ID (from middleware)
+    const approverEmployeeId = req.user?.employeeId;
 
-//     if (!approverEmployeeId) {
-//       return res.status(401).json({ message: "Unauthorized" });
-//     }
+    if (!approverEmployeeId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
 
-//     //Validate leave request ID
-//     const leaveRequestId = Number(req.params.id);
-//     if (isNaN(leaveRequestId)) {
-//       return res.status(400).json({ message: "Invalid leave request ID" });
-//     }
+    //Validate leave request ID
+    const leaveRequestId = Number(req.params.id);
+    if (isNaN(leaveRequestId)) {
+      return res.status(400).json({ message: "Invalid leave request ID" });
+    }
 
-//     //Extract action, comment, and totalDays
-//     const { action, comment, totalDays } = req.body;
+    //Extract action, comment, and totalDays
+    const { action, comment, totalDays } = req.body;
 
-//     if (!["approve", "reject", "comment"].includes(action)) {
-//       return res.status(400).json({ message: "Invalid action" });
-//     }
+    if (!["approve", "reject", "comment"].includes(action)) {
+      return res.status(400).json({ message: "Invalid action" });
+    }
 
-//     //Call service
-//     const result = await decideLeaveRequestService(
-//       leaveRequestId,
-//       approverEmployeeId,
-//       action as "approve" | "reject" | "comment",
-//       comment,
-//       totalDays
-//     );
+    //Call service
+    const result = await decideLeaveRequestService(
+      leaveRequestId,
+      approverEmployeeId,
+      action as "approve" | "reject" | "comment",
+      comment,
+      totalDays
+    );
 
-//     return res.status(200).json(result);
-//   } catch (error: any) {
-//     console.error("Leave decision error:", error);
+    return res.status(200).json(result);
+  } catch (error: any) {
+    console.error("Leave decision error:", error);
 
-//     // Conflict: already approved/rejected
-//     if (
-//       error.message.includes("already approved") ||
-//       error.message.includes("already rejected")
-//     ) {
-//       return res.status(409).json({ message: error.message });
-//     }
+    // Conflict: already approved/rejected
+    if (
+      error.message.includes("already approved") ||
+      error.message.includes("already rejected")
+    ) {
+      return res.status(409).json({ message: error.message });
+    }
 
-//     // Insufficient leave balance
-//     if (error.message.includes("Insufficient leave balance")) {
-//       return res.status(422).json({ message: error.message });
-//     }
+    // Insufficient leave balance
+    if (error.message.includes("Insufficient leave balance")) {
+      return res.status(422).json({ message: error.message });
+    }
 
-//     // Previous step missing
-//     if (error.message.includes("Previous approval step")) {
-//       return res.status(400).json({ message: error.message });
-//     }
+    // Previous step missing
+    if (error.message.includes("Previous approval step")) {
+      return res.status(400).json({ message: error.message });
+    }
 
-//     // Default fallback
-//     return res.status(400).json({ message: error.message || "Something went wrong" });
-//   }
-// };
+    // Default fallback
+    return res.status(400).json({ message: error.message || "Something went wrong" });
+  }
+};

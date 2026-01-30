@@ -12,6 +12,7 @@ import {
 } from "./leaveRequest.controller";
 
 import { checkPermission } from "../middleware/bearAuth";
+import { checkApproveOrComment } from "../utils/permissionChecker";
 
 const leaveRequest = (app: Express) => {
   // CREATE LEAVE REQUEST
@@ -101,7 +102,8 @@ const leaveRequest = (app: Express) => {
 
   // APPROVE LEAVE REQUEST
   app.route("/leave-requests/:id/decision").post(
-    checkPermission("approve_leave_request"),
+    checkPermission("view_leave_request"),
+    checkApproveOrComment,
     async (req, res, next) => {
       try {
         await decideLeaveRequestController(req, res);

@@ -1,3 +1,4 @@
+import { and, eq } from 'drizzle-orm';
 import db from './db'; 
 import { modules, permissions } from './schema';
 
@@ -55,6 +56,7 @@ const seedData = [
       { name: 'view_leave_request', description: 'View leave requests' },
       { name: 'update_leave_request', description: 'Update a leave request' },
       { name: 'delete_leave_request', description: 'Delete a leave request' },
+      { name: 'comment_leave_request', description: 'Comment on leave requests' },
       { name: 'approve_leave_request', description: 'Approve or reject leave requests' },
       { name: 'view_team_leave_requests', description: 'View leave requests of team members' },
     ],
@@ -121,20 +123,67 @@ const seedData = [
 ];
 
 export const seedModulesAndPermissions = async () => {
+  console.log("Starting permission seeding...\n");
+
   for (const mod of seedData) {
-    // Insert module with description
-    const moduleInsert = await db.insert(modules).values({ name: mod.moduleName, description: mod.description }).returning({ id: modules.id });
-    const moduleId = moduleInsert[0].id;
+    // Check if module exists
+    let module = await db.query.modules.findFirst({
+      where: eq(modules.name, mod.moduleName),
+    });
 
-    // Insert permissions for the module with descriptions
-    const permissionInserts = mod.permissions.map((perm) => ({ moduleId, name: perm.name, description: perm.description }));
-    await db.insert(permissions).values(permissionInserts);
+    let moduleId: number;
 
-    console.log(`Seeded module: ${mod.moduleName} with permissions: ${mod.permissions.map(p => p.name).join(', ')}`);
+    // Create module if missing
+    if (!module) {
+      const inserted = await db
+        .insert(modules)
+        .values({
+          name: mod.moduleName,
+          description: mod.description,
+        })
+        .returning({ id: modules.id });
+
+      moduleId = inserted[0].id;
+
+      console.log(`Created module: ${mod.moduleName}`);
+    } else {
+      moduleId = module.id;
+
+      console.log(`ℹModule exists: ${mod.moduleName}`);
+    }
+
+    // Insert permissions safely
+    for (const perm of mod.permissions) {
+      const existing = await db.query.permissions.findFirst({
+        where: and(
+          eq(permissions.name, perm.name),
+          eq(permissions.moduleId, moduleId)
+        ),
+      });
+
+      if (!existing) {
+        await db.insert(permissions).values({
+          moduleId,
+          name: perm.name,
+          description: perm.description,
+        });
+
+        console.log(`Added permission: ${perm.name}`);
+      } else {
+        console.log(`Permission exists: ${perm.name}`);
+      }
+    }
+
+    console.log("");
   }
+
+  console.log("Seeding completed!");
 };
 
 // Run seed
 seedModulesAndPermissions()
-  .then(() => console.log('Seeding completed!'))
-  .catch((err) => console.error('Seeding failed:', err));
+  .then(() => process.exit(0))
+  .catch((err) => {
+    console.error("Seeding failed:", err);
+    process.exit(1);
+  });

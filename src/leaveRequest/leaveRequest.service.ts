@@ -305,151 +305,151 @@ export const deleteLeaveRequestService = async (id: number) => {
   return "Leave request deleted successfully";
 };
 
-export const decideLeaveRequestService = async (
-  leaveRequestId: number,
-  approverEmployeeId: number,
-  action: "approve" | "reject" | "comment",
-  comment?: string,
-  totalDays?: number
-) => {
-  const leave = await db.query.leaveRequests.findFirst({
-    where: eq(leaveRequests.id, leaveRequestId),
-    with: { employee: true },
-  });
+// export const decideLeaveRequestService = async (
+//   leaveRequestId: number,
+//   approverEmployeeId: number,
+//   action: "approve" | "reject" | "comment",
+//   comment?: string,
+//   totalDays?: number
+// ) => {
+//   const leave = await db.query.leaveRequests.findFirst({
+//     where: eq(leaveRequests.id, leaveRequestId),
+//     with: { employee: true },
+//   });
 
-  if (!leave) throw new Error("Leave request not found");
+//   if (!leave) throw new Error("Leave request not found");
 
-  const department = await db.query.departments.findFirst({
-    where: eq(departments.id, leave.approvingDepartmentId),
-  });
+//   const department = await db.query.departments.findFirst({
+//     where: eq(departments.id, leave.approvingDepartmentId),
+//   });
 
-  if (!department) throw new Error("Approving department not found");
+//   if (!department) throw new Error("Approving department not found");
 
-  const isManager = Number(department.managerId) === Number(approverEmployeeId);
-  const currentYear = new Date().getFullYear();
+//   const isManager = Number(department.managerId) === Number(approverEmployeeId);
+//   const currentYear = new Date().getFullYear();
 
-  // Manager comment
-  if (isManager && action === "comment") {
-    await db.update(leaveRequests)
-      .set({
-        managerComment: comment ?? null,
-        updatedAt: new Date(),
-      })
-      .where(eq(leaveRequests.id, leaveRequestId));
+//   // Manager comment
+//   if (isManager && action === "comment") {
+//     await db.update(leaveRequests)
+//       .set({
+//         managerComment: comment ?? null,
+//         updatedAt: new Date(),
+//       })
+//       .where(eq(leaveRequests.id, leaveRequestId));
 
-    return { message: "Manager comment recorded, awaiting HR decision" };
-  }
+//     return { message: "Manager comment recorded, awaiting HR decision" };
+//   }
 
-  // HR actions
-  if (!leave.managerComment) {
-    throw new Error("Waiting for manager comment");
-  }
+//   // HR actions
+//   if (!leave.managerComment) {
+//     throw new Error("Waiting for manager comment");
+//   }
 
-  if (action === "approve" || action === "reject") {
-    // Block double approval or reject
-    if ((leave.status === "approved" && action === "approve") ||
-        (leave.status === "rejected" && action === "reject")) {
-      throw new Error(`Leave already ${action}d`);
-    }
+//   if (action === "approve" || action === "reject") {
+//     // Block double approval or reject
+//     if ((leave.status === "approved" && action === "approve") ||
+//         (leave.status === "rejected" && action === "reject")) {
+//       throw new Error(`Leave already ${action}d`);
+//     }
 
-    const days = Number(totalDays ?? leave.totalDays ?? 0);
+//     const days = Number(totalDays ?? leave.totalDays ?? 0);
 
-    const leaveBalance = await db.query.leaveBalances.findFirst({
-      where: and(
-        eq(leaveBalances.employeeId, leave.employee.id),
-        eq(leaveBalances.leaveTypeId, leave.leaveTypeId),
-        eq(leaveBalances.year, currentYear)
-      ),
-    });
+//     const leaveBalance = await db.query.leaveBalances.findFirst({
+//       where: and(
+//         eq(leaveBalances.employeeId, leave.employee.id),
+//         eq(leaveBalances.leaveTypeId, leave.leaveTypeId),
+//         eq(leaveBalances.year, currentYear)
+//       ),
+//     });
 
-    if (!leaveBalance) throw new Error("Leave balance not found");
+//     if (!leaveBalance) throw new Error("Leave balance not found");
 
-    // Deduct or revert leave balance
-    if (action === "approve") {
-      if (leaveBalance.remainingDays < days) throw new Error("Insufficient leave balance");
+//     // Deduct or revert leave balance
+//     if (action === "approve") {
+//       if (leaveBalance.remainingDays < days) throw new Error("Insufficient leave balance");
 
-      await db.update(leaveBalances)
-        .set({
-          usedDays: (leaveBalance.usedDays ?? 0) + days,
-          remainingDays: (leaveBalance.remainingDays ?? 0) - days,
-          updatedAt: new Date(),
-        })
-        .where(eq(leaveBalances.id, leaveBalance.id));
-    }
+//       await db.update(leaveBalances)
+//         .set({
+//           usedDays: (leaveBalance.usedDays ?? 0) + days,
+//           remainingDays: (leaveBalance.remainingDays ?? 0) - days,
+//           updatedAt: new Date(),
+//         })
+//         .where(eq(leaveBalances.id, leaveBalance.id));
+//     }
 
-    if (action === "reject" && leave.status === "approved") {
-      await db.update(leaveBalances)
-        .set({
-          usedDays: Math.max((leaveBalance.usedDays ?? 0) - days, 0),
-          remainingDays: (leaveBalance.remainingDays ?? 0) + days,
-          updatedAt: new Date(),
-        })
-        .where(eq(leaveBalances.id, leaveBalance.id));
-    }
+//     if (action === "reject" && leave.status === "approved") {
+//       await db.update(leaveBalances)
+//         .set({
+//           usedDays: Math.max((leaveBalance.usedDays ?? 0) - days, 0),
+//           remainingDays: (leaveBalance.remainingDays ?? 0) + days,
+//           updatedAt: new Date(),
+//         })
+//         .where(eq(leaveBalances.id, leaveBalance.id));
+//     }
 
-    //Upsert HR approval/rejection
-    const existingApproval = await db.query.leaveApprovals.findFirst({
-      where: and(
-        eq(leaveApprovals.leaveRequestId, leaveRequestId),
-        eq(leaveApprovals.approverId, approverEmployeeId)
-      ),
-    });
+//     //Upsert HR approval/rejection
+//     const existingApproval = await db.query.leaveApprovals.findFirst({
+//       where: and(
+//         eq(leaveApprovals.leaveRequestId, leaveRequestId),
+//         eq(leaveApprovals.approverId, approverEmployeeId)
+//       ),
+//     });
 
-    if (existingApproval) {
-      // Update existing record
-      await db.update(leaveApprovals)
-        .set({
-          decision: action === "approve" ? "approved" : "rejected",
-          comment: comment ?? existingApproval.comment,
-          decidedAt: new Date(),
-        })
-        .where(eq(leaveApprovals.id, existingApproval.id));
-    } else {
-      // Insert new record
-      const lastApproval = await db.query.leaveApprovals.findMany({
-        where: eq(leaveApprovals.leaveRequestId, leaveRequestId),
-        orderBy: [desc(leaveApprovals.level)],
-        limit: 1,
-      });
+//     if (existingApproval) {
+//       // Update existing record
+//       await db.update(leaveApprovals)
+//         .set({
+//           decision: action === "approve" ? "approved" : "rejected",
+//           comment: comment ?? existingApproval.comment,
+//           decidedAt: new Date(),
+//         })
+//         .where(eq(leaveApprovals.id, existingApproval.id));
+//     } else {
+//       // Insert new record
+//       const lastApproval = await db.query.leaveApprovals.findMany({
+//         where: eq(leaveApprovals.leaveRequestId, leaveRequestId),
+//         orderBy: [desc(leaveApprovals.level)],
+//         limit: 1,
+//       });
 
-      const nextLevel = lastApproval.length ? lastApproval[0].level + 1 : 1;
+//       const nextLevel = lastApproval.length ? lastApproval[0].level + 1 : 1;
 
-      await db.insert(leaveApprovals).values({
-        leaveRequestId,
-        approverId: approverEmployeeId,
-        level: nextLevel,
-        decision: action === "approve" ? "approved" : "rejected",
-        comment: comment ?? null,
-        decidedAt: new Date(),
-      });
-    }
-    const newStatus = action === "approve" ? "approved" : "rejected";
+//       await db.insert(leaveApprovals).values({
+//         leaveRequestId,
+//         approverId: approverEmployeeId,
+//         level: nextLevel,
+//         decision: action === "approve" ? "approved" : "rejected",
+//         comment: comment ?? null,
+//         decidedAt: new Date(),
+//       });
+//     }
+//     const newStatus = action === "approve" ? "approved" : "rejected";
 
-    await db.update(leaveRequests)
-      .set({
-        status: newStatus,
-        hrComment: comment ?? null,
-        totalDays: days,
-        updatedAt: new Date(),
-      })
-      .where(eq(leaveRequests.id, leaveRequestId));
+//     await db.update(leaveRequests)
+//       .set({
+//         status: newStatus,
+//         hrComment: comment ?? null,
+//         totalDays: days,
+//         updatedAt: new Date(),
+//       })
+//       .where(eq(leaveRequests.id, leaveRequestId));
 
-    // Notify employee
-    const start = new Date(leave.startDate).toDateString();
-    const end = new Date(leave.endDate).toDateString();
+//     // Notify employee
+//     const start = new Date(leave.startDate).toDateString();
+//     const end = new Date(leave.endDate).toDateString();
 
-    await sendNotification(
-      leave.employee.id,
-      action === "approve"
-        ? `Your leave request from ${start} to ${end} has been approved.`
-        : `Your leave request from ${start} to ${end} has been rejected.`
-    );
+//     await sendNotification(
+//       leave.employee.id,
+//       action === "approve"
+//         ? `Your leave request from ${start} to ${end} has been approved.`
+//         : `Your leave request from ${start} to ${end} has been rejected.`
+//     );
 
-    return { message: `Leave ${newStatus} successfully` };
-  }
+//     return { message: `Leave ${newStatus} successfully` };
+//   }
 
-  throw new Error("Invalid action");
-};
+//   throw new Error("Invalid action");
+// };
 
 // GET LEAVE REQUESTS FOR MANAGER 
 export const getLeaveRequestsForManagerCommentService = async (
@@ -499,143 +499,144 @@ export const getLeaveRequestsForManagerCommentService = async (
 };
 
 
-// export const decideLeaveRequestService = async (
-//   leaveRequestId: number,
-//   approverEmployeeId: number,
-//   action: "approve" | "reject" | "comment",
-//   comment?: string,
-//   totalDays?: number
-// ) => {
-//   return await db.transaction(async (tx) => {
-//     //Fetch leave request with employee and approvals
-//     const leave = await tx.query.leaveRequests.findFirst({
-//       where: eq(leaveRequests.id, leaveRequestId),
-//       with: {
-//         employee: { with: { user: true } },
-//         approvals: true,
-//       },
-//     });
 
-//     if (!leave) throw new Error("Leave request not found");
-//     const currentYear = new Date().getFullYear();
+export const decideLeaveRequestService = async (
+  leaveRequestId: number,
+  approverEmployeeId: number,
+  action: "approve" | "reject" | "comment",
+  comment?: string,
+  totalDays?: number
+) => {
+  // Fetch leave request with employee and approvals
+  const leave = await db.query.leaveRequests.findFirst({
+    where: eq(leaveRequests.id, leaveRequestId),
+    with: { employee: { with: { user: true } }, approvals: true },
+  });
 
-//     //Handle comment only
-//     if (action === "comment") {
-//       await tx.update(leaveRequests)
-//         .set({ managerComment: comment ?? null, updatedAt: new Date() })
-//         .where(eq(leaveRequests.id, leaveRequestId));
+  if (!leave) throw new Error("Leave request not found");
 
-//       return { message: "Comment recorded successfully" };
-//     }
+  const currentYear = new Date().getFullYear();
 
-//     //Ensure manager comment exists
-//     if (!leave.managerComment)
-//       throw new Error("Manager comment recorded, awaiting HR decision");
+  // Fetch approver and permissions (from your JWT or DB)
+  const approver = await db.query.employees.findFirst({
+    where: eq(employees.id, approverEmployeeId),
+    with: { user: true },
+  });
 
-//     //Prevent duplicate decisions
-//     if (
-//       (leave.status === "approved" && action === "approve") ||
-//       (leave.status === "rejected" && action === "reject")
-//     ) {
-//       throw new Error(`Leave already ${action}d`);
-//     }
+  if (!approver) throw new Error("Approver not found");
 
-//     const days = Number(totalDays ?? leave.totalDays ?? 0);
+  // Validate action
+  if (action === "comment") {
+    await db.update(leaveRequests)
+      .set({ managerComment: comment ?? null, updatedAt: new Date() })
+      .where(eq(leaveRequests.id, leaveRequestId));
 
-//     //Get leave balance
-//     const leaveBalance = await tx.query.leaveBalances.findFirst({
-//       where: and(
-//         eq(leaveBalances.employeeId, leave.employee.id),
-//         eq(leaveBalances.leaveTypeId, leave.leaveTypeId),
-//         eq(leaveBalances.year, currentYear)
-//       ),
-//     });
+    return { message: "Comment recorded successfully" };
+  }
 
-//     if (!leaveBalance) throw new Error("Leave balance not found");
+  // Ensure manager comment exists for approvals/rejections
+  if (!leave.managerComment) {
+    throw new Error("Previous approval step not completed");
+  }
 
-//     //Adjust leave balance
-//     if (action === "approve") {
-//       if (leaveBalance.remainingDays < days)
-//         throw new Error("Insufficient leave balance");
+  // Prevent duplicate decisions
+  if ((leave.status === "approved" && action === "approve") ||
+      (leave.status === "rejected" && action === "reject")) {
+    throw new Error(`Leave already ${action}d`);
+  }
 
-//       await tx.update(leaveBalances)
-//         .set({
-//           usedDays: (leaveBalance.usedDays ?? 0) + days,
-//           remainingDays: (leaveBalance.remainingDays ?? 0) - days,
-//           updatedAt: new Date(),
-//         })
-//         .where(eq(leaveBalances.id, leaveBalance.id));
-//     }
+  const days = Number(totalDays ?? leave.totalDays ?? 0);
 
-//     if (action === "reject" && leave.status === "approved") {
-//       await tx.update(leaveBalances)
-//         .set({
-//           usedDays: Math.max((leaveBalance.usedDays ?? 0) - days, 0),
-//           remainingDays: (leaveBalance.remainingDays ?? 0) + days,
-//           updatedAt: new Date(),
-//         })
-//         .where(eq(leaveBalances.id, leaveBalance.id));
-//     }
+  // Fetch leave balance
+  const leaveBalance = await db.query.leaveBalances.findFirst({
+    where: and(
+      eq(leaveBalances.employeeId, leave.employee.id),
+      eq(leaveBalances.leaveTypeId, leave.leaveTypeId),
+      eq(leaveBalances.year, currentYear)
+    ),
+  });
+  if (!leaveBalance) throw new Error("Leave balance not found");
 
-//     //Upsert approval record
-//     const existingApproval = await tx.query.leaveApprovals.findFirst({
-//       where: and(
-//         eq(leaveApprovals.leaveRequestId, leaveRequestId),
-//         eq(leaveApprovals.approverId, approverEmployeeId)
-//       ),
-//     });
+  // Adjust leave balance
+  if (action === "approve") {
+    if (leaveBalance.remainingDays < days) throw new Error("Insufficient leave balance");
 
-//     if (existingApproval) {
-//       await tx.update(leaveApprovals)
-//         .set({
-//           decision: action === "approve" ? "approved" : "rejected",
-//           comment: comment ?? existingApproval.comment,
-//           decidedAt: new Date(),
-//         })
-//         .where(eq(leaveApprovals.id, existingApproval.id));
-//     } else {
-//       const lastApproval = await tx.query.leaveApprovals.findMany({
-//         where: eq(leaveApprovals.leaveRequestId, leaveRequestId),
-//         orderBy: [desc(leaveApprovals.level)],
-//         limit: 1,
-//       });
+    await db.update(leaveBalances)
+      .set({
+        usedDays: (leaveBalance.usedDays ?? 0) + days,
+        remainingDays: (leaveBalance.remainingDays ?? 0) - days,
+        updatedAt: new Date(),
+      })
+      .where(eq(leaveBalances.id, leaveBalance.id));
+  }
 
-//       const nextLevel = lastApproval.length ? lastApproval[0].level + 1 : 1;
+  if (action === "reject" && leave.status === "approved") {
+    await db.update(leaveBalances)
+      .set({
+        usedDays: Math.max((leaveBalance.usedDays ?? 0) - days, 0),
+        remainingDays: (leaveBalance.remainingDays ?? 0) + days,
+        updatedAt: new Date(),
+      })
+      .where(eq(leaveBalances.id, leaveBalance.id));
+  }
 
-//       await tx.insert(leaveApprovals).values({
-//         leaveRequestId,
-//         approverId: approverEmployeeId,
-//         level: nextLevel,
-//         decision: action === "approve" ? "approved" : "rejected",
-//         comment: comment ?? null,
-//         decidedAt: new Date(),
-//       });
-//     }
+  // Upsert approval record
+  const existingApproval = await db.query.leaveApprovals.findFirst({
+    where: and(
+      eq(leaveApprovals.leaveRequestId, leaveRequestId),
+      eq(leaveApprovals.approverId, approverEmployeeId)
+    ),
+  });
 
-//     //Update leave request
-//     const newStatus = action === "approve" ? "approved" : "rejected";
+  if (existingApproval) {
+    await db.update(leaveApprovals)
+      .set({
+        decision: action === "approve" ? "approved" : "rejected",
+        comment: comment ?? existingApproval.comment,
+        decidedAt: new Date(),
+      })
+      .where(eq(leaveApprovals.id, existingApproval.id));
+  } else {
+    const lastApproval = await db.query.leaveApprovals.findMany({
+      where: eq(leaveApprovals.leaveRequestId, leaveRequestId),
+      orderBy: [desc(leaveApprovals.level)],
+      limit: 1,
+    });
 
-//     await tx.update(leaveRequests)
-//       .set({
-//         status: newStatus,
-//         hrComment: comment ?? null,
-//         totalDays: days,
-//         updatedAt: new Date(),
-//       })
-//       .where(eq(leaveRequests.id, leaveRequestId));
+    const nextLevel = lastApproval.length ? lastApproval[0].level + 1 : 1;
 
-//     //Notify employee 
-//     const start = new Date(leave.startDate).toDateString();
-//     const end = new Date(leave.endDate).toDateString();
+    await db.insert(leaveApprovals).values({
+      leaveRequestId,
+      approverId: approverEmployeeId,
+      level: nextLevel,
+      decision: action === "approve" ? "approved" : "rejected",
+      comment: comment ?? null,
+      decidedAt: new Date(),
+    });
+  }
 
-//     sendNotification(
-//       leave.employee.id,
-//       action === "approve"
-//         ? `Your leave request from ${start} to ${end} has been approved.`
-//         : `Your leave request from ${start} to ${end} has been rejected.`
-//     );
+  // Update leave request
+  const newStatus = action === "approve" ? "approved" : "rejected";
+  await db.update(leaveRequests)
+    .set({
+      status: newStatus,
+      hrComment: comment ?? null,
+      totalDays: days,
+      updatedAt: new Date(),
+    })
+    .where(eq(leaveRequests.id, leaveRequestId));
 
-//     return { message: `Leave ${newStatus} successfully` };
-//   });
-// };
+  // Notify employee
+  const start = new Date(leave.startDate).toDateString();
+  const end = new Date(leave.endDate).toDateString();
+
+  sendNotification(
+    leave.employee.id,
+    action === "approve"
+      ? `Your leave request from ${start} to ${end} has been approved.`
+      : `Your leave request from ${start} to ${end} has been rejected.`
+  );
+
+  return { message: `Leave ${newStatus} successfully` };
+};
 
