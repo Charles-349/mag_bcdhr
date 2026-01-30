@@ -221,6 +221,8 @@ export const getLeaveRequestsByCompanyIdService = async (companyId: number) => {
     columns: {
       proofDocument: true,
       reason: true,
+      managerComment: true,
+      hrComment: true,
       totalDays: true,
       startDate: true,
       endDate: true,
