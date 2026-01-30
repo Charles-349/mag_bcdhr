@@ -462,16 +462,14 @@ export const getLeaveRequestsForManagerCommentService = async (
 
   console.log("Manager ID:", managerEmployeeId, "Company ID:", companyId);
 
-  // Step 1: Get all departments managed by this manager
+  //Get all departments managed by this manager
   const departmentsManaged = await db.query.departments.findMany({
     where: and(
       eq(departments.managerId, managerEmployeeId),
       eq(departments.companyId, companyId)
     ),
-    columns: { id: true }, // only need IDs
+    columns: { id: true }, 
   });
-
-  console.log("Departments managed by manager:", departmentsManaged);
 
   const departmentIds = departmentsManaged.map((d) => d.id);
 
@@ -480,9 +478,7 @@ export const getLeaveRequestsForManagerCommentService = async (
     return [];
   }
 
-  console.log("Department IDs:", departmentIds);
-
-  // Step 2: Get pending leave requests for those departments
+  //Get pending leave requests for those departments
   const leaveRequestsData = await db.query.leaveRequests.findMany({
     where: and(
       eq(leaveRequests.status, "pending"),
@@ -498,8 +494,6 @@ export const getLeaveRequestsForManagerCommentService = async (
       leaveType: true,
     },
   });
-
-  console.log("Pending leave requests found:", leaveRequestsData.length);
 
   return leaveRequestsData;
 };
