@@ -456,17 +456,37 @@ export const getLeaveRequestsForManagerCommentService = async (
   managerEmployeeId: number,
   companyId: number
 ) => {
-  if (!managerEmployeeId || !companyId) throw new Error("Invalid managerEmployeeId or companyId");
+  if (!managerEmployeeId || !companyId) {
+    throw new Error("Invalid managerEmployeeId or companyId");
+  }
 
-  // Fetch leave requests where the approving department's manager is the current manager
-  return await db.query.leaveRequests.findMany({
+  console.log("Manager ID:", managerEmployeeId, "Company ID:", companyId);
+
+  // Step 1: Get all departments managed by this manager
+  const departmentsManaged = await db.query.departments.findMany({
+    where: and(
+      eq(departments.managerId, managerEmployeeId),
+      eq(departments.companyId, companyId)
+    ),
+    columns: { id: true }, // only need IDs
+  });
+
+  console.log("Departments managed by manager:", departmentsManaged);
+
+  const departmentIds = departmentsManaged.map((d) => d.id);
+
+  if (departmentIds.length === 0) {
+    console.log("No departments found for this manager.");
+    return [];
+  }
+
+  console.log("Department IDs:", departmentIds);
+
+  // Step 2: Get pending leave requests for those departments
+  const leaveRequestsData = await db.query.leaveRequests.findMany({
     where: and(
       eq(leaveRequests.status, "pending"),
-      sql`${leaveRequests.approvingDepartmentId} IN (
-        SELECT id 
-        FROM departments 
-        WHERE manager_id = ${managerEmployeeId} AND company_id = ${companyId}
-      )`
+      inArray(leaveRequests.approvingDepartmentId, departmentIds)
     ),
     with: {
       employee: {
@@ -478,5 +498,150 @@ export const getLeaveRequestsForManagerCommentService = async (
       leaveType: true,
     },
   });
+
+  console.log("Pending leave requests found:", leaveRequestsData.length);
+
+  return leaveRequestsData;
 };
+
+
+// export const decideLeaveRequestService = async (
+//   leaveRequestId: number,
+//   approverEmployeeId: number,
+//   action: "approve" | "reject" | "comment",
+//   comment?: string,
+//   totalDays?: number
+// ) => {
+//   return await db.transaction(async (tx) => {
+//     //Fetch leave request with employee and approvals
+//     const leave = await tx.query.leaveRequests.findFirst({
+//       where: eq(leaveRequests.id, leaveRequestId),
+//       with: {
+//         employee: { with: { user: true } },
+//         approvals: true,
+//       },
+//     });
+
+//     if (!leave) throw new Error("Leave request not found");
+//     const currentYear = new Date().getFullYear();
+
+//     //Handle comment only
+//     if (action === "comment") {
+//       await tx.update(leaveRequests)
+//         .set({ managerComment: comment ?? null, updatedAt: new Date() })
+//         .where(eq(leaveRequests.id, leaveRequestId));
+
+//       return { message: "Comment recorded successfully" };
+//     }
+
+//     //Ensure manager comment exists
+//     if (!leave.managerComment)
+//       throw new Error("Manager comment recorded, awaiting HR decision");
+
+//     //Prevent duplicate decisions
+//     if (
+//       (leave.status === "approved" && action === "approve") ||
+//       (leave.status === "rejected" && action === "reject")
+//     ) {
+//       throw new Error(`Leave already ${action}d`);
+//     }
+
+//     const days = Number(totalDays ?? leave.totalDays ?? 0);
+
+//     //Get leave balance
+//     const leaveBalance = await tx.query.leaveBalances.findFirst({
+//       where: and(
+//         eq(leaveBalances.employeeId, leave.employee.id),
+//         eq(leaveBalances.leaveTypeId, leave.leaveTypeId),
+//         eq(leaveBalances.year, currentYear)
+//       ),
+//     });
+
+//     if (!leaveBalance) throw new Error("Leave balance not found");
+
+//     //Adjust leave balance
+//     if (action === "approve") {
+//       if (leaveBalance.remainingDays < days)
+//         throw new Error("Insufficient leave balance");
+
+//       await tx.update(leaveBalances)
+//         .set({
+//           usedDays: (leaveBalance.usedDays ?? 0) + days,
+//           remainingDays: (leaveBalance.remainingDays ?? 0) - days,
+//           updatedAt: new Date(),
+//         })
+//         .where(eq(leaveBalances.id, leaveBalance.id));
+//     }
+
+//     if (action === "reject" && leave.status === "approved") {
+//       await tx.update(leaveBalances)
+//         .set({
+//           usedDays: Math.max((leaveBalance.usedDays ?? 0) - days, 0),
+//           remainingDays: (leaveBalance.remainingDays ?? 0) + days,
+//           updatedAt: new Date(),
+//         })
+//         .where(eq(leaveBalances.id, leaveBalance.id));
+//     }
+
+//     //Upsert approval record
+//     const existingApproval = await tx.query.leaveApprovals.findFirst({
+//       where: and(
+//         eq(leaveApprovals.leaveRequestId, leaveRequestId),
+//         eq(leaveApprovals.approverId, approverEmployeeId)
+//       ),
+//     });
+
+//     if (existingApproval) {
+//       await tx.update(leaveApprovals)
+//         .set({
+//           decision: action === "approve" ? "approved" : "rejected",
+//           comment: comment ?? existingApproval.comment,
+//           decidedAt: new Date(),
+//         })
+//         .where(eq(leaveApprovals.id, existingApproval.id));
+//     } else {
+//       const lastApproval = await tx.query.leaveApprovals.findMany({
+//         where: eq(leaveApprovals.leaveRequestId, leaveRequestId),
+//         orderBy: [desc(leaveApprovals.level)],
+//         limit: 1,
+//       });
+
+//       const nextLevel = lastApproval.length ? lastApproval[0].level + 1 : 1;
+
+//       await tx.insert(leaveApprovals).values({
+//         leaveRequestId,
+//         approverId: approverEmployeeId,
+//         level: nextLevel,
+//         decision: action === "approve" ? "approved" : "rejected",
+//         comment: comment ?? null,
+//         decidedAt: new Date(),
+//       });
+//     }
+
+//     //Update leave request
+//     const newStatus = action === "approve" ? "approved" : "rejected";
+
+//     await tx.update(leaveRequests)
+//       .set({
+//         status: newStatus,
+//         hrComment: comment ?? null,
+//         totalDays: days,
+//         updatedAt: new Date(),
+//       })
+//       .where(eq(leaveRequests.id, leaveRequestId));
+
+//     //Notify employee 
+//     const start = new Date(leave.startDate).toDateString();
+//     const end = new Date(leave.endDate).toDateString();
+
+//     sendNotification(
+//       leave.employee.id,
+//       action === "approve"
+//         ? `Your leave request from ${start} to ${end} has been approved.`
+//         : `Your leave request from ${start} to ${end} has been rejected.`
+//     );
+
+//     return { message: `Leave ${newStatus} successfully` };
+//   });
+// };
 

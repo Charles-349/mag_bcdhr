@@ -1,8 +1,15 @@
-
 // import { Request, Response, NextFunction } from "express";
 // import { verifyToken } from "../utils/jwt";
 // import db from "../Drizzle/db";
-// import { employees } from "../Drizzle/schema";
+// import {
+//   employees,
+//   departments,
+//   userRoles,
+//   rolePermissions,
+//   permissions,
+//   roles,
+// } from "../Drizzle/schema";
+// import { eq, and } from "drizzle-orm";
 
 // export const checkPermission = (
 //   requiredPermission: string,
@@ -10,49 +17,109 @@
 // ) => {
 //   return async (req: Request, res: Response, next: NextFunction) => {
 //     try {
-//       //BOOTSTRAP MODE 
+//       //BOOTSTRAP MODE
 //       if (options.allowBootstrap) {
-//         const employeesCount = await db.select().from(employees);
-//         if (employeesCount.length === 0) return next();
+//         const count = await db.select().from(employees);
+//         if (count.length === 0) return next();
 //       }
+
+//       //TOKEN CHECK
 //       const authHeader = req.headers.authorization;
+
 //       if (!authHeader?.startsWith("Bearer ")) {
-//         return res.status(401).json({ message: "Unauthorized: No token" });
+//         return res.status(401).json({ message: "Unauthorized" });
 //       }
 
 //       let decoded: any;
+
 //       try {
 //         decoded = verifyToken(authHeader.split(" ")[1]);
 //       } catch {
-//         return res.status(401).json({ message: "Invalid or expired token" });
+//         return res.status(401).json({ message: "Invalid token" });
 //       }
 
-//       // Attach user to request
-//       (req as any).user = decoded;
+//       // NORMALIZE USER
+//       const userId = decoded.id;
 
-//       //SUPER ADMIN BYPASS 
+//       if (!userId) {
+//         return res.status(401).json({ message: "Invalid user" });
+//       }
+
+//       // Get employee + company
+//       const employee = await db
+//         .select({
+//           employeeId: employees.id,
+//           companyId: departments.companyId,
+//         })
+//         .from(employees)
+//         .innerJoin(departments, eq(employees.departmentId, departments.id))
+//         .where(eq(employees.userId, userId))
+//         .limit(1);
+
+//       if (!employee.length) {
+//         return res.status(401).json({ message: "Employee not found" });
+//       }
+
+//       const employeeId = employee[0].employeeId;
+//       const companyId = employee[0].companyId;
+
+//       if (!companyId) {
+//         return res.status(401).json({ message: "Company not found" });
+//       }
+
+//       // Attach normalized user
+//       (req as any).user = {
+//         id: userId,
+//         employeeId,
+//         companyId,
+//       };
+//       //SUPER ADMIN
 //       if (decoded.roles?.includes("super_admin")) {
 //         return next();
 //       }
-//       //ADMIN BYPASS
-//       if (decoded.roles?.includes("admin")) {
-//         return next();
-//       }
 
-//       //PERMISSION CHECK FOR NORMAL USERS
-//       const userPermissions: string[] = decoded.permissions || [];
+//       //PERMISSION CHECK
+//       const permissionRecord = await db
+//         .select({
+//           name: permissions.name,
+//         })
+//         .from(userRoles)
+//         .innerJoin(roles, eq(userRoles.roleId, roles.id))
+//         .innerJoin(
+//           rolePermissions,
+//           eq(roles.id, rolePermissions.roleId)
+//         )
+//         .innerJoin(
+//           permissions,
+//           eq(rolePermissions.permissionId, permissions.id)
+//         )
+//         .where(
+//           and(
+//             eq(userRoles.userId, userId),
+//             eq(userRoles.companyId, companyId),
+//             eq(permissions.name, requiredPermission)
+//           )
+//         )
+//         .limit(1);
 
-//       if (!userPermissions.includes(requiredPermission)) {
-//         return res.status(403).json({ message: "You do not have permission" });
+//       if (!permissionRecord.length) {
+//         return res.status(403).json({
+//           message: "Permission denied",
+//         });
 //       }
 
 //       return next();
-//     } catch (err) {
-//       console.error("Permission middleware error:", err);
-//       return res.status(500).json({ message: "Internal server error" });
+//     } catch (error) {
+//       console.error("Permission middleware error:", error);
+
+//       return res.status(500).json({
+//         message: "Internal server error",
+//       });
 //     }
 //   };
 // };
+
+
 
 import { Request, Response, NextFunction } from "express";
 import { verifyToken } from "../utils/jwt";
