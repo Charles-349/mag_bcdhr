@@ -58,15 +58,37 @@ export const getRolePermissionByIdController = async (req: Request, res: Respons
 // REMOVE PERMISSION FROM ROLE
 export const removePermissionFromRoleController = async (req: Request, res: Response) => {
   try {
-    const { roleId, permissionId } = req.body;
-    const result = await removePermissionFromRoleService(roleId, permissionId);
-    if (!result) return res.status(404).json({ message: "Permission not assigned to role" });
-    return res.status(200).json({ message: result });
+    // Safely get body
+    const body = req.body ?? {};
+
+    const { roleId, permissionId } = body;
+
+    // Validate
+    if (!roleId || !permissionId) {
+      return res.status(400).json({
+        success: false,
+        message: "roleId and permissionId are required",
+      });
+    }
+
+    const result = await removePermissionFromRoleService(
+      Number(roleId),
+      Number(permissionId)
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: result,
+    });
+
   } catch (error: any) {
-    console.error("Error removing permission from role:", error);
-    return res.status(500).json({ message: error.message });
+    return res.status(400).json({
+      success: false,
+      message: error.message || "Failed to remove permission",
+    });
   }
 };
+
 
 // GET ALL PERMISSIONS OF AN EMPLOYEE THROUGH THEIR ROLES
 export const getEmployeePermissionsController = async (req: Request, res: Response) => {
