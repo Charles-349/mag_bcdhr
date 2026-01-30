@@ -61,7 +61,7 @@ const rolePermissionRoutes = (app: Express) => {
   );
 
   // REMOVE PERMISSION FROM ROLE
-  app.route("/role-permissions/remove").post(
+  app.route("/role-permissions/remove").delete(
     checkPermission("remove_permission"),
     async (req, res, next) => {
       try {
