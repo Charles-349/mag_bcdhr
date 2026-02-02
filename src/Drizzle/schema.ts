@@ -135,7 +135,7 @@ export const leaveBalances = pgTable(
   {
     id: serial("id").primaryKey(),
     employeeId: integer("employee_id")
-      .references(() => employees.id)
+      .references(() => employees.id, { onDelete: "cascade" })
       .notNull(),
     leaveTypeId: integer("leave_type_id")
       .references(() => leaveTypes.id)
